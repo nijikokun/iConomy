@@ -772,7 +772,7 @@ public class iConomy extends Plugin
 			}
 
 			// Total
-			int total = this.itemCost("sell", cInt(itemId), amount, true);
+			int total = this.itemCost("sell", cInt(itemId), sold, true);
 			String totalAmount = total + this.moneyName;
 
 			// Send Message
