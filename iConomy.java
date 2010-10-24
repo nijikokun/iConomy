@@ -541,10 +541,10 @@ public class iConomy extends Plugin
 		sell.put("345", this.selling.getString("compass", "0"));
 		buy.put("346", this.buying.getString("fishing-rod", "0"));
 		sell.put("346", this.selling.getString("fishing-rod", "0"));
-		buy.put("2556", this.buying.getString("gold-record", "0"));
-		sell.put("2556", this.selling.getString("gold-record", "0"));
-		buy.put("2557", this.buying.getString("green-record", "0"));
-		sell.put("2557", this.selling.getString("green-record", "0"));
+		buy.put("2256", this.buying.getString("gold-record", "0"));
+		sell.put("2256", this.selling.getString("gold-record", "0"));
+		buy.put("2257", this.buying.getString("green-record", "0"));
+		sell.put("2257", this.selling.getString("green-record", "0"));
 
 		// Setup Listing
 		this.rankedList = new LinkedList();
