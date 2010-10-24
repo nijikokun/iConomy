@@ -1,11 +1,15 @@
-import java.io.IOException;
+import java.io.*;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.text.ParseException;
+import java.util.Date;
+
 
 public class iConomy extends Plugin
 {
@@ -92,11 +96,11 @@ public class iConomy extends Plugin
 		}
 
 		if(this.can(player, "credit")) {
-			player.sendMessage(Colors.Rose + "/money -c|credit - Give a player money");
+			player.sendMessage(Colors.Rose + "/money -c|credit <a> <p> - Give a player money");
 		}
 
 		if(this.can(player, "debit")) {
-			player.sendMessage(Colors.Rose + "/money -d|debit - Take a players money");
+			player.sendMessage(Colors.Rose + "/money -d|debit <a> <p> - Take a players money");
 		}
 
 		if(this.can(player, "rank")) {
@@ -192,11 +196,11 @@ public class iConomy extends Plugin
 		this.sellGive = this.props.getString("sell-success", "Your account has been credited with %s!");
 		this.sellReject = this.props.getString("sell-rejected", "Sorry, that item is currently unavailable!");
 		this.sellNone = this.props.getString("sell-none", "Whoops, you seem to not have any of that item!");
-		this.buyGive = this.props.getString("buy-success", "Your purchase costed you %s! Here you go :)!");
+		this.buyGive = this.props.getString("buy-success", "Your purchase cost you %s! Here you go :)!");
 		this.buyReject = this.props.getString("buy-rejected", "Sorry, that item is currently unavailable!");
 		this.buyNotEnough = this.props.getString("buy-not-enough", "Sorry, you currently don't have enough to buy that!");
 		this.buyInvalidAmount = this.props.getString("buy-invalid-amount", "Sorry, you must buy these in increments of %d!");
-		this.sellInvalidAmount = this.props.getString("sell-invalid-amount", "Sorry, you must buy these in increments of %d!");
+		this.sellInvalidAmount = this.props.getString("sell-invalid-amount", "Sorry, you must sell these in increments of %d!");
 
 		try {
 			this.data = new mData(str, i);
@@ -206,8 +210,6 @@ public class iConomy extends Plugin
 		}
 
 		// Selling
-		buy.put("0", this.buying.getString("air", "0"));
-		sell.put("0", this.selling.getString("air", "0"));
 		buy.put("1", this.buying.getString("stone", "0"));
 		sell.put("1", this.selling.getString("stone", "0"));
 		buy.put("2", this.buying.getString("grass", "0"));
@@ -535,8 +537,6 @@ public class iConomy extends Plugin
 		buy.put("2557", this.buying.getString("green-record", "0"));
 		sell.put("2557", this.selling.getString("green-record", "0"));
 
-		
-
 		// Setup Listing
 		this.rankedList = new LinkedList();
 
@@ -569,6 +569,37 @@ public class iConomy extends Plugin
 		}
 
 		return true;
+	}
+
+	public static String logDate() {
+	    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	    Date now = new Date();
+	    return format.format(now);
+	}
+
+	public void shopLog(String type, String data) {
+	   String date = logDate();
+	   if(type.equalsIgnoreCase("buy") && this.logBuy) {
+		try{
+			FileWriter fstream = new FileWriter("iConomy-iBuy.log", true);
+			BufferedWriter out = new BufferedWriter(fstream);
+			out.write(date + "|" + data);
+			out.newLine();
+			out.close();
+		}catch (Exception es){
+			log.severe("[iCurrency Buy Logging] " + es.getMessage());
+		}
+	   } else if(type.equalsIgnoreCase("sell") && this.logSell) {
+		try{
+			FileWriter fstream = new FileWriter("iConomy-iSell.log", true);
+			BufferedWriter out = new BufferedWriter(fstream);
+			out.write(date + "|" + data);
+			out.newLine();
+			out.close();
+		}catch (Exception es){
+			log.severe("[iCurrency Sell Logging] " + es.getMessage());
+		}
+	   }
 	}
 
 	public static String cInt(int i) {
@@ -661,6 +692,7 @@ public class iConomy extends Plugin
 		if(!this.itemCan("buy",cInt(itemId),amount)){
 		    player.sendMessage(Colors.Rose + String.format(this.buyInvalidAmount, needsAmount));
 		    log.info("[iConomy Shop] " + "Player "+ player.getName() +" attempted to buy bundle ["+ itemId +"] with the offset amount [" + amount + "].");
+		    this.shopLog("buy", player.getName() + "|0|202|"+ itemId +"|"+amount);
 		    return true;
 		}
 
@@ -682,10 +714,12 @@ public class iConomy extends Plugin
 			// Send Message
 			player.sendMessage(Colors.Green + String.format(this.buyGive, totalAmount));
 			log.info("[iConomy Shop] " + "Player "+ player.getName() +" bought item ["+ itemId +"] amount [" + amount + "] total ["+totalAmount+"].");
+			this.shopLog("buy", player.getName() + "|1|200|"+ itemId +"|"+amount+"|"+total);
 		} else {
 			// Send Message
 			player.sendMessage(Colors.Rose + this.buyReject);
-			log.info("[iConomy Shop] " + "Player "+ player.getName() +" requested to buy an unsellable item: ["+ itemId +"].");
+			log.info("[iConomy Shop] " + "Player "+ player.getName() +" requested to buy an unavailable item: ["+ itemId +"].");
+			this.shopLog("buy", player.getName() + "|0|201|"+ itemId);
 			return true;
 		}
 
@@ -699,6 +733,7 @@ public class iConomy extends Plugin
 		if(!this.itemCan("sell",cInt(itemId),amount)){
 		    player.sendMessage(Colors.Rose + String.format(this.sellInvalidAmount, needsAmount));
 		    log.info("[iConomy Shop] " + "Player "+ player.getName() +" attempted to sell bundle ["+ itemId +"] with the offset amount [" + amount + "].");
+		    this.shopLog("sell", player.getName() + "|0|203|" + itemId + "|" + amount);
 		    return true;
 		}
 
@@ -706,9 +741,15 @@ public class iConomy extends Plugin
 			int itemAmount = this.itemCost("sell", cInt(itemId), amount, false);
 
 			if(itemAmount != 0){
-				bag.removeItem(new Item(itemId,amount));
+				int amt = amount;
+
+				while (amt > 0) {
+				    bag.removeItem(new Item(itemId, (amt > 64 ? 64 : amt)));
+				    amt -= 64;
+				}
+
 				bag.updateInventory();
-				
+
 				// Total
 				int total = this.itemCost("sell", cInt(itemId), amount, true);
 				String totalAmount = total + this.moneyName;
@@ -720,19 +761,23 @@ public class iConomy extends Plugin
 				player.sendMessage(Colors.Green + String.format(this.sellGive, totalAmount));
 
 				log.info("[iConomy Shop] " + "Player "+ player.getName() +" sold item ["+ itemId +"] amount [" + amount + "] total ["+totalAmount+"].");
+				this.shopLog("sell", player.getName() + "|1|200|" + itemId + "|" + amount + "|" + total);
 				return true;
 			} else {
 				// Send Message
 				player.sendMessage(Colors.Rose + this.sellReject);
 				log.info("[iConomy Shop] " + "Player "+ player.getName() +" requested to sell an unsellable item: ["+ itemId +"].");
+				this.shopLog("sell", player.getName() + "|0|201|"+ itemId);
 				return true;
 			}
 		} else {
+			// Send Message
+			player.sendMessage(Colors.Rose + this.sellNone);
 			log.info("[iConomy Shop] " + "Player "+ player.getName() +" attempted to sell itemId ["+ itemId +"] but had none.");
+			this.shopLog("sell", player.getName() + "|0|202|"+ itemId);
 			return true;
 		}
-	}
-
+    }
 
 	/**
 	* Gives money to player 2 idk what the really boolean is all about.
@@ -745,7 +790,7 @@ public class iConomy extends Plugin
 
 		if (really){
 			player2.sendMessage(Colors.Green + "You received " + amount + this.moneyName);
-			showBalance(player2, true);
+			showBalance(player2, null, true);
 
 			if (player1 != null){
 				player1.sendMessage(Colors.Green + amount + this.moneyName + " deposited into " + player2.getName() + "'s account");
@@ -773,7 +818,7 @@ public class iConomy extends Plugin
 
 		if (really) {
 			player2.sendMessage(Colors.Green + amount + this.moneyName + " was deducted from your account.");
-			showBalance(player2, true);
+			showBalance(player2, null, true);
 
 			if (player1 != null){
 				player1.sendMessage(Colors.Green + amount + this.moneyName + " removed from " + player2.getName() + "'s account");
@@ -814,8 +859,8 @@ public class iConomy extends Plugin
 			player2.sendMessage(Colors.Green + pdata1 + " has sent you " + amount + this.moneyName);
 
 			// Show each balance
-			showBalance(player1,true);
-			showBalance(player2,true);
+			showBalance(player1, null, true);
+			showBalance(player2, null, true);
 
 			// Update each players state
 			updateState(player1, false);
@@ -833,12 +878,12 @@ public class iConomy extends Plugin
 	*
 	* If not you @isMe is false, if you @isMe is true.
 	*/
-	public void showBalance(Player player, boolean isMe){
+	public void showBalance(Player player, Player local, boolean isMe){
 		int i = this.data.getBalance(player.getName());
 		if(isMe) {
 			player.sendMessage(Colors.Green + "Balance: " + i + this.moneyName);
 		} else {
-			player.sendMessage(Colors.Green + player.getName() + "'s Balance: " + i + this.moneyName);
+			local.sendMessage(Colors.Green + player.getName() + "'s Balance: " + i + this.moneyName);
 		}
 	}
 
@@ -847,7 +892,7 @@ public class iConomy extends Plugin
 	*
 	* If not you isme is false, if you isme is true.
 	*/
-	public void rank(Player player, boolean isMe){
+	public void rank(Player player, Player local, boolean isMe){
 		if (!this.rankedList.contains(player.getName())){
 			insertIntoRankedList(player.getName());
 		}
@@ -857,7 +902,7 @@ public class iConomy extends Plugin
 		if(isMe) {
 			player.sendMessage(Colors.Green + "Your rank is " + i);
 		} else {
-			player.sendMessage(Colors.Green + player.getName() + " rank is " + i);
+			local.sendMessage(Colors.Green + player.getName() + " rank is " + i);
 		}
 	}
 
@@ -1052,7 +1097,7 @@ public class iConomy extends Plugin
 					//-------------------------------------------------------------
 					// TIER 1 [SELF MONEY CHECK
 					//-------------------------------------------------------------
-					p.showBalance(player,true);
+					p.showBalance(player, null, true);
 					return true;
 				}
 
@@ -1106,7 +1151,7 @@ public class iConomy extends Plugin
 							return false;
 						}
 
-						p.rank(player, true);
+						p.rank(player, null, true);
 						return true;
 					} else if(split[1].equalsIgnoreCase("?") || split[1].equalsIgnoreCase("help")){
 						p.halp(player, "money");
@@ -1127,7 +1172,7 @@ public class iConomy extends Plugin
 						}
 
 						// Show another players balance
-						p.showBalance(localPlayer, false);
+						p.showBalance(localPlayer, player, false);
 						return true;
 					}
 				}
@@ -1213,7 +1258,7 @@ public class iConomy extends Plugin
 						}
 
 						// Show another players rank
-						p.rank(localPlayer,false);
+						p.rank(localPlayer, player, false);
 						return true;
 					} else if(split[1].equalsIgnoreCase("?") || split[1].equalsIgnoreCase("help")){
 						p.halp(player, "money");
@@ -1353,7 +1398,7 @@ public class iConomy extends Plugin
 						}
 
 						// Show another players rank
-						rank(localPlayer,false);
+						rank(localPlayer, player, false);
 						return true;
 					} else if(split[1].equalsIgnoreCase("?") || split[1].equalsIgnoreCase("help")){
 						p.halp(player, "money");
