@@ -32,6 +32,7 @@ public class iConomy extends Plugin
 	public String canPay;
 	public String canCredit;
 	public String canDebit;
+	public String canReset;
 	public String canRank;
 	public String canTop;
 	public String canView;
@@ -106,6 +107,10 @@ public class iConomy extends Plugin
 
 		if(this.can(player, "rank")) {
 			player.sendMessage(Colors.Rose + "/money -r|rank <p> - Show your rank or another players");
+		}
+
+		if(this.can(player, "reset")) {
+			player.sendMessage(Colors.Rose + "/money -x|reset <p> - Reset a players account balance.");
 		}
 
 		if(this.can(player, "top")) {
@@ -183,6 +188,7 @@ public class iConomy extends Plugin
 		this.canPay = this.props.getString("can-pay", "*");
 		this.canDebit = this.props.getString("can-debit", "admins,");
 		this.canCredit = this.props.getString("can-credit", "admins,");
+		this.canReset = this.props.getString("can-reset", "admins,");
 		this.canRank = this.props.getString("can-rank", "*");
 		this.canTop = this.props.getString("can-top", "*");
 		this.canView = this.props.getString("can-view-player-balance", "*");
@@ -830,6 +836,25 @@ public class iConomy extends Plugin
 		updateState(player2, true);
 	}
 
+	public void reset(Player player, Player local, boolean notify) {
+	    String pdata = player.getName();
+
+	    // Reset
+	    this.data.setBalance(pdata, 0);
+
+	    // Notify
+	    if(notify) {
+		player.sendMessage(Colors.Green + "Your account has been reset.");
+	    }
+
+	    // Notify the resetter and server regardless.
+	    local.sendMessage(Colors.Rose + pdata + "'s account has been reset.");
+	    log.info("[iConomy Money] " + player.getName() + "'s account has been reset by " + local.getName());
+
+	    // Update
+	    updateState(player, true);
+	}
+
 	/**
 	* Takes money from player1, and gives it to player2 determined by amount given.
 	*/
@@ -996,6 +1021,19 @@ public class iConomy extends Plugin
 			}
 
 			return true;
+		} else if(command.equals("reset")) {
+			if(!this.canReset.equals("*")) {
+				String[] groups = this.canReset.split(",");
+				for (String group : groups) {
+					if(player.isInGroup(group)){
+						return true;
+					}
+				}
+
+				return false;
+			}
+
+			return true;
 		} else if(command.equals("rank")) {
 			if(!this.canRank.equals("*")) {
 				String[] groups = this.canRank.split(",");
@@ -1134,6 +1172,16 @@ public class iConomy extends Plugin
 
 						player.sendMessage(Colors.Rose + "Invalid Usage: /money [-d|debit] <player> <amount>");
 						return true;
+					} else if(split[1].equalsIgnoreCase("-x") || split[1].equalsIgnoreCase("reset")){
+						//-------------------------------------------------------------
+						// TIER 2 [RESET]
+						//-------------------------------------------------------------
+						if(!p.can(player, "reset")){
+							return false;
+						}
+
+						player.sendMessage(Colors.Rose + "Invalid Usage: /money [-x|reset] <player> <notify(y|n)>");
+						return true;
 					} else if(split[1].equalsIgnoreCase("-t") || split[1].equalsIgnoreCase("top")){
 						//-------------------------------------------------------------
 						// TIER 2 [TOP]
@@ -1222,6 +1270,23 @@ public class iConomy extends Plugin
 						// Show this amount!
 						p.debit(player, player, Integer.parseInt(split[2]), true);
 						return true;
+					} else if(split[1].equalsIgnoreCase("-x") || split[1].equalsIgnoreCase("reset")){
+						//-------------------------------------------------------------
+						// TIER 3 [RESET]
+						//-------------------------------------------------------------
+						if(!p.can(player, "reset")){
+							return false;
+						}
+
+						localPlayer = p.getPlayer(split[2]);
+
+						if (localPlayer == null) {
+							player.sendMessage(Colors.Rose + "Player not online: " + split[2]);
+							return true;
+						}
+
+						p.reset(localPlayer, player, true);
+						return true;
 					} else if(split[1].equalsIgnoreCase("-t") || split[1].equalsIgnoreCase("top")){
 						//-------------------------------------------------------------
 						// TIER 3 [TOP]
@@ -1254,7 +1319,7 @@ public class iConomy extends Plugin
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							player.sendMessage(Colors.Rose + "Invalid Usage: /money [-r|rank] <player>");
+							player.sendMessage(Colors.Rose + "Player not online: " + split[2]);
 							return true;
 						}
 
@@ -1285,7 +1350,7 @@ public class iConomy extends Plugin
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null){
-							player.sendMessage(Colors.Rose + "Player not found: " + split[2]);
+							player.sendMessage(Colors.Rose + "Player not online: " + split[2]);
 							return true;
 						}
 
@@ -1314,7 +1379,7 @@ public class iConomy extends Plugin
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null){
-							player.sendMessage(Colors.Rose + "Player not found: " + split[2]);
+							player.sendMessage(Colors.Rose + "Player not online: " + split[2]);
 							return true;
 						}
 
@@ -1343,7 +1408,7 @@ public class iConomy extends Plugin
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null){
-							player.sendMessage(Colors.Rose + "Player not found: " + split[2]);
+							player.sendMessage(Colors.Rose + "Player not online: " + split[2]);
 							return true;
 						}
 
@@ -1361,6 +1426,31 @@ public class iConomy extends Plugin
 						// Show this amount!
 						p.debit(player, localPlayer, Integer.parseInt(split[3]), true);
 						return true;
+					} else if(split[1].equalsIgnoreCase("-x") || split[1].equalsIgnoreCase("reset")){
+						//-------------------------------------------------------------
+						// TIER 4 [RESET]
+						//-------------------------------------------------------------
+						if(!p.can(player, "reset")){
+							return false;
+						}
+
+						localPlayer = p.getPlayer(split[2]);
+
+						if (localPlayer == null) {
+							player.sendMessage(Colors.Rose + "Player not online: " + split[2]);
+							return true;
+						}
+
+						if(split[3].equalsIgnoreCase("y") || split[3].equalsIgnoreCase("yes")) {
+						    p.reset(localPlayer, player, true);
+						    return true;
+						} else if(split[3].equalsIgnoreCase("n") || split[3].equalsIgnoreCase("no")) {
+						    p.reset(localPlayer, player, false);
+						    return true;
+						} else {
+						    player.sendMessage(Colors.Rose + "Invalid Parameter[3] for /shop reset. must be y/n");
+						    return true;
+						}
 					} else if(split[1].equalsIgnoreCase("-t") || split[1].equalsIgnoreCase("top")){
 						//-------------------------------------------------------------
 						// TIER 4 [TOP]
