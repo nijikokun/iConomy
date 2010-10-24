@@ -65,6 +65,7 @@ public class iConomy extends Plugin
 		}
 
 		etc.getInstance().addCommand("/money", "help|? - For more information");
+		etc.getInstance().addCommand("/shop", "help|? - For more information");
 	}
 
 	public void initialize() {
