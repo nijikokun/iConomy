@@ -47,6 +47,7 @@ public class iConomy extends Plugin
 	public String sellGiveAmount;
 	public String sellGive;
 	public String sellNone;
+	public Integer startingBalance;
 	public boolean logBuy;
 	public boolean logSell;
 	private double version = 0.8;
@@ -147,15 +148,8 @@ public class iConomy extends Plugin
 	*/
 	public void updateState(Player player, boolean write){
 		String str = player.getName();
-		boolean remove = this.rankedList.remove(str);
-
-		if(remove){ }
-
+		this.rankedList.remove(str);
 		insertIntoRankedList(str);
-
-		if (write) {
-			this.data.write();
-		}
 	}
 
 	/**
@@ -172,7 +166,7 @@ public class iConomy extends Plugin
 		String str = this.props.getString("dataFile", "iConomy.data");
 
 		// Money Starting Balance
-		int i = this.props.getInt("starting-balance", 0);
+		this.startingBalance = this.props.getInt("starting-balance", 0);
 
 		// Ticker Amounts
 		this.moneyGive = this.props.getInt("money-give", 0);
@@ -211,12 +205,8 @@ public class iConomy extends Plugin
 		this.buyInvalidAmount = this.props.getString("buy-invalid-amount", "Sorry, you must buy these in increments of %d!");
 		this.sellInvalidAmount = this.props.getString("sell-invalid-amount", "Sorry, you must sell these in increments of %d!");
 
-		try {
-			this.data = new mData(str, i);
-		} catch (Exception localException) {
-			log.severe("[iConomy v" + this.version + "] Critical error while loading data:");
-			localException.printStackTrace();
-		}
+		// Data
+		this.data = new mData(str, this.startingBalance);
 
 		// Selling
 		buy.put("1", this.buying.getString("stone", "0"));
@@ -851,7 +841,7 @@ public class iConomy extends Plugin
 	    String pdata = player.getName();
 
 	    // Reset
-	    this.data.setBalance(pdata, 0);
+	    this.data.setBalance(pdata, this.startingBalance);
 
 	    // Notify
 	    if(notify) {
@@ -981,6 +971,7 @@ public class iConomy extends Plugin
 	private void insertIntoRankedList(String name){
 		int i = this.data.getBalance(name);
 		int j = 0;
+
 		for (String player : this.rankedList)
 		{
 			if (i > this.data.getBalance(player)) {

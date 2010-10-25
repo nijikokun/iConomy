@@ -1,106 +1,77 @@
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-import java.util.Hashtable;
+import java.io.*;
+import java.util.*;
 import java.util.logging.Logger;
 
-public class mData implements Serializable {
-  protected static final Logger log = Logger.getLogger("Minecraft");
-  private Hashtable balances;
-  private Hashtable chests;
-  private String file;
-  private int startBalance;
+public final class mData implements Serializable {
+	protected static final Logger log = Logger.getLogger("Minecraft");
+	private PropertiesFile accounts;
+	private Hashtable balances;
+	private int startingBalance;
+	private static final long serialVersionUID = -5796481236376288855L;
 
-  public mData(String paramString, int paramInt) throws IOException, ClassNotFoundException {
-    mData localmData = null;
-    this.file = paramString;
-    this.startBalance = paramInt;
-    try
-    {
-      FileInputStream localFileInputStream = new FileInputStream(this.file);
-      ObjectInputStream localObjectInputStream = new ObjectInputStream(localFileInputStream);
-      localmData = (mData)localObjectInputStream.readObject();
-      localObjectInputStream.close();
-      localFileInputStream.close();
-    }
-    catch (Exception localException)
-    {
-      localmData = null;
-    }
+	public mData(String file, int balance) {
+		this.startingBalance = balance;
 
-    if (localmData == null)
-    {
-      this.balances = new Hashtable();
-      this.chests = new Hashtable();
-      write();
-    }
-    else
-    {
-      this.balances = localmData.balances;
-      this.chests = localmData.chests;
-    }
-  }
+		// Check the properties file
+		File pFile = new File("iConomy-balances.properties");
+		if (!pFile.exists()) {
+			// State we are starting.
+			log.severe("[iConomy] Older version found, Starting conversion of .data to .properties file!");
 
-  public void write()
-  {
-    try
-    {
-      FileOutputStream localFileOutputStream = new FileOutputStream(this.file);
-      ObjectOutputStream localObjectOutputStream = new ObjectOutputStream(localFileOutputStream);
-      localObjectOutputStream.writeObject(this);
-      localObjectOutputStream.close();
-      localFileOutputStream.close();
-    }
-    catch (Exception localException)
-    {
-      log.severe("[mData] Critical error while writing data: ");
-      localException.printStackTrace();
-    }
-  }
+			// Convert to our latest type.
+			if(this.convert(file)){
+			    log.severe("[iConomy] Conversion to .properties file complete!");
+			} else {
+			    log.severe("[iConomy] Conversion could not be completed. Please post any errors to Nijikokun if applicable.");
+			}
+		} else {
+			this.accounts = new PropertiesFile("iConomy-balances.properties");
+		}
+	}
 
-  public int getBalance(String paramString)
-  {
-    if (this.balances.get(paramString) == null)
-    {
-      this.balances.put(paramString, Integer.valueOf(this.startBalance));
-      return this.startBalance;
-    }
+	public boolean convert(String filename) {
+		mData localmData = null;
 
-    return ((Integer)this.balances.get(paramString)).intValue();
-  }
+		// Initiate file
+		this.accounts = new PropertiesFile("iConomy-balances.properties");
 
-  public void setBalance(String paramString, int paramInt)
-  {
-    this.balances.put(paramString, Integer.valueOf(paramInt));
-  }
+		try {
+			FileInputStream localFileInputStream = new FileInputStream(filename);
+			ObjectInputStream localObjectInputStream = new ObjectInputStream(localFileInputStream);
+			localmData = (mData)localObjectInputStream.readObject();
+			localObjectInputStream.close();
+			localFileInputStream.close();
+		} catch (Exception localException) {
+			// Nothing to convert
+			log.severe(localException.getMessage());
+			return false;
+		}
 
-  public String getChest(String paramString)
-  {
-    if (this.chests.get(paramString) != null)
-    {
-      return (String)this.chests.get(paramString);
-    }
+		if (localmData == null){
+			log.severe("[iConomy] No .data file found.");
+			return false;
+		}
 
-    return null;
-  }
+		this.balances = localmData.balances;
 
-  public void setChestOwner(String paramString, Block paramBlock)
-  {
-    this.chests.put(paramString, getChestName(paramBlock));
-  }
+		Enumeration e = this.balances.keys();
 
-  public String getChestName(Block paramBlock)
-  {
-    return Integer.toString(paramBlock.getX()) + Integer.toString(paramBlock.getY()) + Integer.toString(paramBlock.getZ());
-  }
+		while (e.hasMoreElements()) {
+			String key = e.nextElement().toString();
+			int value = ((Integer)this.balances.get(key)).intValue();
 
-  public boolean hasChestAccess(String paramString, Block paramBlock)
-  {
-    log.info("Player: " + paramString + ", Chestblock:" + paramBlock);
-    String str = getChestName(paramBlock);
-    return (!this.chests.contains(str)) || (getChest(paramString).equals(str));
-  }
+			// Push the new values
+			this.accounts.setInt(key, value);
+		}
+
+		return true;
+	}
+
+	public int getBalance(String playerName) {
+		return this.accounts.getInt(playerName, this.startingBalance);
+	}
+
+	public void setBalance(String playerName, int balance) {
+		this.accounts.setInt(playerName, balance);
+	}
 }
