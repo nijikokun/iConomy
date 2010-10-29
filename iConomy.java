@@ -1231,10 +1231,10 @@ public class iConomy extends Plugin {
 		this.auctionStartingBid = startingBid;
 		this.auctionMin = minBid;
 		this.auctionMax = maxBid;
-
+		final iConomy iHateJava = this;
 		auctionTimer.scheduleAtFixedRate(new TimerTask() {
 		    int i = interval;
-		    iConomy p;
+		    iConomy p = iHateJava;
 		    public void run() {
 			i--;
 			if (i == 10) {
