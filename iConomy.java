@@ -959,11 +959,11 @@ public class iConomy extends Plugin {
 			}
 
 			// Total
-			int total = this.itemCost("sell", cInt(itemId), sold, true);
+			int total = this.itemCost("sell", cInt(itemId), amount, true);
 			String totalAmount = total + this.moneyName;
 
 			// Send Message
-			player.sendMessage(Colors.Gray + String.format(this.sellGiveAmount, sold, amount));
+			player.sendMessage(Colors.Gray + String.format(this.sellGiveAmount, sold, ((needsAmount > 1) ? needsAmount*amount : amount)));
 			player.sendMessage(Colors.Green + String.format(this.sellGive, totalAmount));
 
 			// Take dat money!
@@ -1232,7 +1232,7 @@ public class iConomy extends Plugin {
 		this.auctionMin = minBid;
 		this.auctionMax = maxBid;
 		final iConomy iHateJava = this;
-		auctionTimer.scheduleAtFixedRate(new TimerTask() {
+		this.auctionTimer.scheduleAtFixedRate(new TimerTask() {
 		    int i = interval;
 		    iConomy p = iHateJava;
 		    public void run() {
@@ -1240,12 +1240,12 @@ public class iConomy extends Plugin {
 			if (i == 10) {
 				p.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + "10" + Colors.Gray + " seconds left to bid!");
 			}
+
 			if (i < 5) {
 				p.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + i + Colors.Gray + " seconds left to bid!");
 			}
-			if (i < 0) {
-			    p.endAuction();
-			}
+
+			if (i < 0) { p.endAuction(); }
 		    }
 		}, 0, 1000);
 		
