@@ -2121,6 +2121,11 @@ public class iConomy extends Plugin {
 							return false;
 						}
 
+						if(p.auctionTimerRunning) {
+							player.sendMessage(Colors.Rose + "Auction currently in progress! Use "+Colors.White+"/auction"+Colors.Rose+" to learn more!");
+							return true;
+						}
+
 						if(split.length < 5) {
 							player.sendMessage(Colors.Rose + "Usage: /auction start <time-seconds> <item> <amount> <start-bid>");
 							player.sendMessage(Colors.Rose + "    Optional after start-bid: min-bid, max-bid");
