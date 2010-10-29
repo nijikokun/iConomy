@@ -149,7 +149,7 @@ public class iConomy extends Plugin {
 			}
 
 			if (this.can(player, "credit")) {
-				player.sendMessage(Colors.Rose + "/money -c|credit <a> <p> - Give a player money");
+				player.sendMessage(Colors.Rose + "/money -c|credit <p> <a> - Give a player money");
 			}
 
 			if (this.can(player, "debit")) {
@@ -1284,10 +1284,11 @@ public class iConomy extends Plugin {
 
 		if(this.auctionCurAmount >= this.auctionMax && this.auctionMax != 0) {
 			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + this.auctionCurName + Colors.Gray + " hit the set max! " + Colors.Yellow + "Auction Ending!");
-			endAuction();
+			this.endAuction();
 		} else {
 			// Broadcast the message
-			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + this.auctionCurName + Colors.Gray + " is now in the lead, auction currently stands at " + Colors.Green + this.auctionCurAmount + this.moneyName + Colors.Gray + "!");
+			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + this.auctionCurName + Colors.Gray + " is now in the lead!");
+			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Gray + " Auction currently stands at " + Colors.Green + this.auctionCurAmount + this.moneyName + Colors.Gray + "!");
 		}
 	}
 
@@ -1310,6 +1311,8 @@ public class iConomy extends Plugin {
 					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Aborted.");
 				} else {
 					this.debit(null, player.getName(), this.auctionCurAmount, false);
+					this.deposit(null, auctioner.getName(), this.auctionCurAmount, false);
+					auctioner.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "Auction Over! " + Colors.Green + this.auctionCurAmount + this.moneyName + Colors.Gray + " has been credited to your account!");
 					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "You Won! " + Colors.Green + this.auctionCurAmount + this.moneyName + Colors.Gray + " has been debited from your account!");
 					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + "Enjoy your item(s)!");
 
@@ -1317,9 +1320,23 @@ public class iConomy extends Plugin {
 					player.giveItem(this.auctionItem, this.auctionAmount);
 				}
 			} else {
+				Player player = this.getPlayer(this.auctionStarter);
+
+				if(player != null) {
+					player.giveItem(this.auctionItem, this.auctionAmount);
+					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + "Item(s) have been returned to you!");
+				}
+
 				this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Has ended. No winner as the minimum bid was not met.");
 			}
 		} else {
+			Player player = this.getPlayer(this.auctionStarter);
+
+			if(player != null) {
+				player.giveItem(this.auctionItem, this.auctionAmount);
+				player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + "Item(s) have been returned to you!");
+			}
+			
 			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Has ended with no bids.");
 		}
 	}
@@ -2013,7 +2030,7 @@ public class iConomy extends Plugin {
 					} else if (split[1].equalsIgnoreCase("-b") || split[1].equalsIgnoreCase("bid")) {
 						if(player.getName().equals(p.auctionStarter)) {
 							player.sendMessage(Colors.Rose + "Cannot bid on your own auction!");
-						} else if (p.can(player, "end")) {
+						} else if (p.can(player, "bid")) {
 							int amount = Integer.parseInt(split[2]);
 
 							if(amount < 1) {
@@ -2060,7 +2077,7 @@ public class iConomy extends Plugin {
 					} else if (split[1].equalsIgnoreCase("-b") || split[1].equalsIgnoreCase("bid")) {
 						if(player.getName().equals(p.auctionStarter)) {
 							player.sendMessage(Colors.Rose + "Cannot bid on your own auction!");
-						} else if (p.can(player, "end")) {
+						} else if (p.can(player, "bid")) {
 							int amount = Integer.parseInt(split[2]);
 
 							if(amount < 1) {
@@ -2152,7 +2169,8 @@ public class iConomy extends Plugin {
 						if(split.length >= 8) {
 							min = Integer.parseInt(split[7]);
 
-							if(min <= 2 && min >= 1) {
+							if(min < 3) {
+								log.info(player+"-"+name+"-"+interval+"-"+itemID+"-"+amount+"-"+start+"-"+min+"-"+max+"");
 								player.sendMessage(Colors.Rose + "Min cannot be lower than 2!");
 								return true;
 							}
@@ -2162,8 +2180,8 @@ public class iConomy extends Plugin {
 						if(split.length >= 9) {
 							max = Integer.parseInt(split[8]);
 
-							if(max <= 2 && max >= 1) {
-								player.sendMessage(Colors.Rose + "Max cannot be lower than 2!");
+							if(max < 4) {
+								player.sendMessage(Colors.Rose + "Max cannot be lower than 3!");
 								return true;
 							} else if(max < min) {
 								player.sendMessage(Colors.Rose + "Max cannot be lower than minimum bid!");
