@@ -1290,7 +1290,7 @@ public class iConomy extends Plugin {
 		} else {
 			// Broadcast the message
 			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + this.auctionCurName + Colors.Gray + " is now in the lead!");
-			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Gray + " Auction currently stands at " + Colors.Green + this.auctionCurAmount + this.moneyName + Colors.Gray + "!");
+			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Gray + "Auction currently stands at " + Colors.Green + this.auctionCurAmount + this.moneyName + Colors.Gray + "!");
 		}
 	}
 
@@ -1305,17 +1305,31 @@ public class iConomy extends Plugin {
 				Player player = this.getPlayer(this.auctionCurName);
 				Player auctioner = this.getPlayer(this.auctionStarter);
 
-				if(player == null) {
-					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "Unfortunately the user is not online to recieve the auction!");
-					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Aborted.");
+				if(player == null && auctioner == null) {
+					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "Unfortunately the user and auctioner is not online!");
+					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+ Colors.Yellow + "How Rare. Aborted.");
+				} else if (player == null && auctioner != null) {
+					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "Winner left!");
+					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+ Colors.Yellow + "Giving items back to auctioner. Aborting.");
+
+					// Weee~
+					auctioner.giveItem(this.auctionItem, this.auctionAmount);
+					auctioner.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + "Item(s) have been returned to you!");
+				} else if (player == null) {
+					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "Unfortunately the winner is not online to recieve the auction!");
+					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+ Colors.Yellow + "Aborted.");
 				} else if(auctioner == null) {
 					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "Unfortunately the auctioneer is not online to transfer the auction!");
-					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Aborted.");
+					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+ Colors.Yellow + "Aborted.");
 				} else {
 					this.debit(null, player.getName(), this.auctionCurAmount, false);
 					this.deposit(null, auctioner.getName(), this.auctionCurAmount, false);
-					auctioner.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "Auction Over! " + Colors.Green + this.auctionCurAmount + this.moneyName + Colors.Gray + " has been credited to your account!");
-					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "You Won! " + Colors.Green + this.auctionCurAmount + this.moneyName + Colors.Gray + " has been debited from your account!");
+
+					auctioner.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "Auction Over!");
+					auctioner.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + this.auctionCurAmount + this.moneyName + Colors.Gray + " has been credited to your account!");
+					
+					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "You Won! ");
+					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + this.auctionCurAmount + this.moneyName + Colors.Gray + " has been debited from your account!");
 					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + "Enjoy your item(s)!");
 
 					// Give items! :D
