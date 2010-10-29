@@ -1232,8 +1232,10 @@ public class iConomy extends Plugin {
 		this.auctionItem = itemId;
 		this.auctionAmount = itemAmount;
 		this.auctionStarter = player.getName();
+		this.auctionCurBid = 0;
 		this.auctionCurAmount = startingBid;
 		this.auctionStartingBid = startingBid;
+		this.auctionCurBidCount = 0;
 		this.auctionMin = minBid;
 		this.auctionMax = maxBid;
 
@@ -1270,7 +1272,7 @@ public class iConomy extends Plugin {
 	}
 
 	public void bidAuction(Player player, int amount) {
-		if(this.auctionCurBid != 0) {
+		if(this.auctionCurBid != 0 && this.auctionCurAmount != this.auctionStartingBid) {
 			Player previous = this.getPlayer(this.auctionCurName);
 			if(previous != null) {
 				previous.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + "You have been outbid!");
@@ -1339,6 +1341,16 @@ public class iConomy extends Plugin {
 			
 			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Has ended with no bids.");
 		}
+
+		this.auctionItem = 0;
+		this.auctionAmount = 0;
+		this.auctionStarter = "";
+		this.auctionCurBid = 0;
+		this.auctionCurAmount = 0;
+		this.auctionStartingBid = 0;
+		this.auctionCurBidCount = 0;
+		this.auctionMin = 0;
+		this.auctionMax = 0;
 	}
 
 
@@ -1982,7 +1994,7 @@ public class iConomy extends Plugin {
 						player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Gold + player.getName() + Colors.Yellow + " Current Balance: " + Colors.Gray + p.auctionCurAmount);
 
 					} else {
-						player.sendMessage(Colors.Rose + "No auction running!");
+						player.sendMessage(Colors.Rose + "No Auction currently in progress! Use "+Colors.White+"/auction ?"+Colors.Rose+" to learn more!");
 					}
 
 					return true;
@@ -1994,6 +2006,11 @@ public class iConomy extends Plugin {
 						p.halp(player, "auction");
 						return true;
 					} else if (split[1].equalsIgnoreCase("-b") || split[1].equalsIgnoreCase("bid")) {
+						if(!p.auctionTimerRunning) {
+							player.sendMessage(Colors.Rose + "No Auction currently in progress! Use "+Colors.White+"/auction"+Colors.Rose+" to learn more!");
+							return true;
+						}
+
 						if(player.getName().equals(p.auctionStarter)) {
 							player.sendMessage(Colors.Rose + "Cannot bid on your own auction!");
 						} else if (p.can(player, "bid")) {
@@ -2004,6 +2021,11 @@ public class iConomy extends Plugin {
 
 						return true;
 					} else if (split[1].equalsIgnoreCase("-e") || split[1].equalsIgnoreCase("end")) {
+						if(!p.auctionTimerRunning) {
+							player.sendMessage(Colors.Rose + "No Auction currently in progress! Use "+Colors.White+"/auction"+Colors.Rose+" to learn more!");
+							return true;
+						}
+
 						if(player.getName().equals(p.auctionStarter)) {
 							p.endAuction();
 						} else if (p.can(player, "end")) {
@@ -2014,7 +2036,7 @@ public class iConomy extends Plugin {
 
 						return true;
 					} else if (split[1].equalsIgnoreCase("-s") || split[1].equalsIgnoreCase("start")) {
-						player.sendMessage(Colors.Rose + "Usage: /auction start <name> <time-seconds> <item> <amount> <start-bid>");
+						player.sendMessage(Colors.Rose + "Usage: /auction start <time-seconds> <item> <amount> <start-bid>");
 						player.sendMessage(Colors.Rose + "    Optional after start-bid: min-bid, max-bid");
 						return true;
 					}
@@ -2028,6 +2050,11 @@ public class iConomy extends Plugin {
 						p.halp(player, "auction");
 						return true;
 					} else if (split[1].equalsIgnoreCase("-b") || split[1].equalsIgnoreCase("bid")) {
+						if(!p.auctionTimerRunning) {
+							player.sendMessage(Colors.Rose + "No Auction currently in progress! Use "+Colors.White+"/auction"+Colors.Rose+" to learn more!");
+							return true;
+						}
+
 						if(player.getName().equals(p.auctionStarter)) {
 							player.sendMessage(Colors.Rose + "Cannot bid on your own auction!");
 						} else if (p.can(player, "bid")) {
@@ -2052,6 +2079,11 @@ public class iConomy extends Plugin {
 
 						return true;
 					} else if (split[1].equalsIgnoreCase("-e") || split[1].equalsIgnoreCase("end")) {
+						if(!p.auctionTimerRunning) {
+							player.sendMessage(Colors.Rose + "No Auction currently in progress! Use "+Colors.White+"/auction"+Colors.Rose+" to learn more!");
+							return true;
+						}
+
 						if(player.getName().equals(p.auctionStarter)) {
 							p.endAuction();
 						} else if (p.can(player, "end")) {
@@ -2062,9 +2094,9 @@ public class iConomy extends Plugin {
 
 						return true;
 					} else if (split[1].equalsIgnoreCase("-s") || split[1].equalsIgnoreCase("start")) {
-						player.sendMessage(Colors.Rose + "Usage: /auction start <name> <time-seconds> <item> <amount> <start-bid>");
+						player.sendMessage(Colors.Rose + "Usage: /auction start <time-seconds> <item> <amount> <start-bid>");
 						player.sendMessage(Colors.Rose + "    Optional after start-bid: min-bid, max-bid");
-						player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, ?");
+						player.sendMessage(Colors.Rose + "Alt-Commands: -s");
 						return true;
 					}
 
@@ -2075,6 +2107,11 @@ public class iConomy extends Plugin {
 					if (split[1].equalsIgnoreCase("?") || split[1].equalsIgnoreCase("help")) {
 						p.halp(player, "auction");
 					} else if (split[1].equalsIgnoreCase("-b") || split[1].equalsIgnoreCase("bid")) {
+						if(!p.auctionTimerRunning) {
+							player.sendMessage(Colors.Rose + "No Auction currently in progress! Use "+Colors.White+"/auction"+Colors.Rose+" to learn more!");
+							return true;
+						}
+
 						if(player.getName().equals(p.auctionStarter)) {
 							player.sendMessage(Colors.Rose + "Cannot bid on your own auction!");
 						} else if (p.can(player, "bid")) {
@@ -2099,6 +2136,11 @@ public class iConomy extends Plugin {
 
 						return true;
 					} else if (split[1].equalsIgnoreCase("-e") || split[1].equalsIgnoreCase("end")) {
+						if(!p.auctionTimerRunning) {
+							player.sendMessage(Colors.Rose + "No Auction currently in progress! Use "+Colors.White+"/auction"+Colors.Rose+" to learn more!");
+							return true;
+						}
+
 						if(player.getName().equals(p.auctionStarter)) {
 							p.endAuction();
 						} else if (p.can(player, "end")) {
@@ -2129,7 +2171,7 @@ public class iConomy extends Plugin {
 						if(split.length < 5) {
 							player.sendMessage(Colors.Rose + "Usage: /auction start <time-seconds> <item> <amount> <start-bid>");
 							player.sendMessage(Colors.Rose + "    Optional after start-bid: min-bid, max-bid");
-							player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, ?");
+							player.sendMessage(Colors.Rose + "Alt-Commands: -s");
 							return true;
 						}
 
