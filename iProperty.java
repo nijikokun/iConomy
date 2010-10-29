@@ -15,18 +15,14 @@ public final class iProperty {
 	private Properties properties;
 	private String fileName;
 
-	public iProperty(String fileName)
-	{
+	public iProperty(String fileName) {
 		this.fileName = fileName;
 		this.properties = new Properties();
 		File file = new File(fileName);
 
-		if (file.exists())
-		{
+		if (file.exists()){
 			load();
-		}
-		else
-		{
+		} else {
 			save();
 		}
 	}
