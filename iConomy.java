@@ -2100,7 +2100,7 @@ public class iConomy extends Plugin {
 							return false;
 						}
 
-						if(split.length < 6) {
+						if(split.length < 7) {
 							player.sendMessage(Colors.Rose + "Usage: /auction start <name> <time-seconds> <item> <amount> <start-bid>");
 							player.sendMessage(Colors.Rose + "    Optional after start-bid: min-bid, max-bid");
 							player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, ?");
@@ -2108,7 +2108,7 @@ public class iConomy extends Plugin {
 						}
 
 						// 6
-						if(split.length < 7) {
+						if(split.length > 7) {
 							name = split[2];
 							interval = Integer.parseInt(split[3]);
 							amount = Integer.parseInt(split[5]);
@@ -2144,7 +2144,7 @@ public class iConomy extends Plugin {
 						}
 
 						// 7
-						if(split.length < 8) {
+						if(split.length > 8) {
 							min = Integer.parseInt(split[7]);
 
 							if(min <= 2 && min >= 1) {
@@ -2154,7 +2154,7 @@ public class iConomy extends Plugin {
 						}
 
 						// 9
-						if(split.length < 9) {
+						if(split.length > 9) {
 							max = Integer.parseInt(split[8]);
 
 							if(max <= 2 && max >= 1) {
