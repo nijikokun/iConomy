@@ -1210,7 +1210,7 @@ public class iConomy extends Plugin {
 		while (amt > 0) {
 			if (bag.hasItem(itemId, ((amt > 64) ? 64 : amt), 6400)) {
 				sold = sold + ((amt > 64) ? 64 : amt);
-				bag.removeItem(new Item(itemAmount, (amt > 64 ? 64 : amt)));
+				bag.removeItem(new Item(itemId, (amt > 64 ? 64 : amt)));
 				amt -= 64;
 			} else {
 				this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Yellow + "Auctioner has attempted to cheat!");
@@ -1229,6 +1229,7 @@ public class iConomy extends Plugin {
 		}
 
 		this.auctionTimerRunning = true;
+		this.auctionItem = itemId;
 		this.auctionAmount = itemAmount;
 		this.auctionStarter = player.getName();
 		this.auctionCurAmount = startingBid;
