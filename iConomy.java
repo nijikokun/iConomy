@@ -55,7 +55,7 @@ public class iConomy extends Plugin {
 	public boolean globalShop;
 	public boolean physicalShop;
 	// Auction settings
-	final Timer auctionTimer;
+	public Timer auctionTimer = new Timer();
 	boolean auctionTimerRunning;
 	public String auctionName;
 	public String auctionStarter;
@@ -1203,13 +1203,13 @@ public class iConomy extends Plugin {
 			p.sendMessage(message);
 	}
 	
-	public boolean startAuction(Player player, String name, final int interval, int itemId, int itemAmount, int startingBid, int minBid, int maxBid) {
+	public boolean startAuction(Player player, String name, int inter, int itemId, int itemAmount, int startingBid, int minBid, int maxBid) {
 		Inventory bag = player.getInventory();
 		int amt = itemAmount;
 		int sold = 0;
 		while (amt > 0) {
-			if (bag.hasItem(itemAmount, (amt > 64 ? 64 : amt), 6400)) {
-				sold = sold + (amt > 64 ? 64 : amt);
+			if (bag.hasItem(itemId, ((amt > 64) ? 64 : amt), 6400)) {
+				sold = sold + ((amt > 64) ? 64 : amt);
 				bag.removeItem(new Item(itemAmount, (amt > 64 ? 64 : amt)));
 				amt -= 64;
 			} else {
@@ -1219,6 +1219,15 @@ public class iConomy extends Plugin {
 			}
 		}
 
+		// Really didn't sell anything did we?
+		if (sold == 0) {
+			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Yellow + "Auctioner has attempted to cheat!");
+			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Yellow + "Specified items are not in his inventory!");
+			return false;
+		} else {
+			bag.updateInventory();
+		}
+
 		this.auctionTimerRunning = true;
 		this.auctionAmount = itemAmount;
 		this.auctionStarter = player.getName();
@@ -1226,23 +1235,35 @@ public class iConomy extends Plugin {
 		this.auctionStartingBid = startingBid;
 		this.auctionMin = minBid;
 		this.auctionMax = maxBid;
+
+		// Setup finals
 		final iConomy iHateJava = this;
-		this.auctionTimer.scheduleAtFixedRate(new TimerTask() {
+		final int interval = inter;
+
+		// The timer whoops.
+		this.auctionTimer = new Timer();
+
+		// Start
+		auctionTimer.scheduleAtFixedRate(new TimerTask() {
 		    int i = interval;
 		    iConomy p = iHateJava;
 		    public void run() {
-			i--;
+			this.i--;
 			if (i == 10) {
-				p.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + "10" + Colors.Gray + " seconds left to bid!");
+				this.p.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + "10" + Colors.Gray + " seconds left to bid!");
 			}
 
-			if (i < 5) {
-				p.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + i + Colors.Gray + " seconds left to bid!");
+			if (i < 6 && i > 1) {
+				this.p.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + i + Colors.Gray + " seconds left to bid!");
 			}
 
-			if (i < 0) { p.endAuction(); }
+			if(i == 1) {
+				this.p.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + i + Colors.Gray + " second left to bid!");
+			}
+
+			if (i < 1) { this.p.endAuction(); }
 		    }
-		}, 0, 1000);
+		}, 0L, 1000);
 		
 		return true;
 	}
@@ -1288,23 +1309,11 @@ public class iConomy extends Plugin {
 					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Aborted.");
 				} else {
 					this.debit(null, player.getName(), this.auctionCurAmount, false);
-					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "You Won! " + Colors.Green + this.auctionAmount + this.moneyName + Colors.Gray + " has been debited from your account!");
+					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "You Won! " + Colors.Green + this.auctionCurAmount + this.moneyName + Colors.Gray + " has been debited from your account!");
 					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + "Enjoy your item(s)!");
 
-					Inventory bag = auctioner.getInventory();
-					int amt = this.auctionAmount;
-					int sold = 0;
-					while (amt > 0) {
-						if (bag.hasItem(this.auctionItem, (amt > 64 ? 64 : amt), 6400)) {
-							sold = sold + (amt > 64 ? 64 : amt);
-							bag.removeItem(new Item(this.auctionItem, (amt > 64 ? 64 : amt)));
-							amt -= 64;
-						} else {
-							this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Gray + "Auctioner has attempted to cheat! No items are in his inventory!");
-							this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Aborted.");
-							break;
-						}
-					}
+					// Give items! :D
+					player.giveItem(this.auctionItem, this.auctionAmount);
 				}
 			} else {
 				this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Has ended. No winner as the minimum bid was not met.");
@@ -2095,7 +2104,7 @@ public class iConomy extends Plugin {
 							return false;
 						}
 
-						if(split.length < 7) {
+						if(split.length < 6) {
 							player.sendMessage(Colors.Rose + "Usage: /auction start <name> <time-seconds> <item> <amount> <start-bid>");
 							player.sendMessage(Colors.Rose + "    Optional after start-bid: min-bid, max-bid");
 							player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, ?");
@@ -2103,7 +2112,7 @@ public class iConomy extends Plugin {
 						}
 
 						// 6
-						if(split.length > 7) {
+						if(split.length > 6) {
 							name = split[2];
 							interval = Integer.parseInt(split[3]);
 							amount = Integer.parseInt(split[5]);
@@ -2139,7 +2148,7 @@ public class iConomy extends Plugin {
 						}
 
 						// 7
-						if(split.length > 8) {
+						if(split.length >= 8) {
 							min = Integer.parseInt(split[7]);
 
 							if(min <= 2 && min >= 1) {
@@ -2149,7 +2158,7 @@ public class iConomy extends Plugin {
 						}
 
 						// 9
-						if(split.length > 9) {
+						if(split.length >= 9) {
 							max = Integer.parseInt(split[8]);
 
 							if(max <= 2 && max >= 1) {
@@ -2160,6 +2169,8 @@ public class iConomy extends Plugin {
 								return true;
 							}
 						}
+
+						log.info(player+"-"+name+"-"+interval+"-"+itemID+"-"+amount+"-"+start+"-"+min+"-"+max+"");
 
 						if(p.startAuction(player, name, interval, itemID, amount, start, min, max)) {
 							player.sendMessage(Colors.Yellow + "Auction has begun.");
