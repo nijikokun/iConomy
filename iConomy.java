@@ -1203,7 +1203,7 @@ public class iConomy extends Plugin {
 			p.sendMessage(message);
 	}
 	
-	public boolean startAuction(Player player, String name, int inter, int itemId, int itemAmount, int startingBid, int minBid, int maxBid) {
+	public boolean startAuction(Player player, int inter, int itemId, int itemAmount, int startingBid, int minBid, int maxBid) {
 		Inventory bag = player.getInventory();
 		int amt = itemAmount;
 		int sold = 0;
@@ -1976,7 +1976,7 @@ public class iConomy extends Plugin {
 					if(p.auctionTimerRunning) {
 						String itemName = (String) p.buy.get(cInt(p.auctionItem));
 						itemName.replace("-", " ");
-						player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+ Colors.Yellow + " Started by " + Colors.Gold + p.auctionStarter + Colors.Yellow + " Currently Winning: " + Colors.Gold + p.auctionCurName);
+						player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+ Colors.Yellow + " Started by " + Colors.Gold + p.auctionStarter + Colors.Yellow + " Currently Winning: " + Colors.Gold + ((p.auctionCurName == null) ? "Nobody" : p.auctionCurName));
 						player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Gold + player.getName() + Colors.Yellow + " Item: ["+Colors.Gray + p.auctionAmount + Colors.Yellow + "] " + Colors.Gray + itemName);
 						player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Gold + player.getName() + Colors.Yellow + " Starting Bid: " + Colors.Gray + p.auctionStartingBid);
 						player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Gold + player.getName() + Colors.Yellow + " Current Balance: " + Colors.Gray + p.auctionCurAmount);
@@ -2099,7 +2099,7 @@ public class iConomy extends Plugin {
 
 						return true;
 					} else if (split[1].equalsIgnoreCase("-e") || split[1].equalsIgnoreCase("end")) {
-						if(player.getName() == p.auctionStarter) {
+						if(player.getName().equals(p.auctionStarter)) {
 							p.endAuction();
 						} else if (p.can(player, "end")) {
 							p.endAuction();
@@ -2115,26 +2115,24 @@ public class iConomy extends Plugin {
 						int amount = 0;
 						int itemID = 0;
 						int interval = 0;
-						String name = "";
 						String itemName = "";
 
 						if (!p.can(player, "auction")) {
 							return false;
 						}
 
-						if(split.length < 6) {
-							player.sendMessage(Colors.Rose + "Usage: /auction start <name> <time-seconds> <item> <amount> <start-bid>");
+						if(split.length < 5) {
+							player.sendMessage(Colors.Rose + "Usage: /auction start <time-seconds> <item> <amount> <start-bid>");
 							player.sendMessage(Colors.Rose + "    Optional after start-bid: min-bid, max-bid");
 							player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, ?");
 							return true;
 						}
 
 						// 6
-						if(split.length > 6) {
-							name = split[2];
-							interval = Integer.parseInt(split[3]);
-							amount = Integer.parseInt(split[5]);
-							start = Integer.parseInt(split[6]);
+						if(split.length > 5) {
+							interval = Integer.parseInt(split[2]);
+							amount = Integer.parseInt(split[4]);
+							start = Integer.parseInt(split[5]);
 
 							if(interval < 11) {
 								player.sendMessage(Colors.Rose + "Interval must be above 10 seconds!");
@@ -2142,14 +2140,14 @@ public class iConomy extends Plugin {
 							}
 
 							try {
-								itemID = Integer.parseInt(split[4]);
+								itemID = Integer.parseInt(split[3]);
 							} catch (NumberFormatException n) {
-								itemID = etc.getDataSource().getItem(split[4]);
+								itemID = etc.getDataSource().getItem(split[3]);
 							}
 
 							if (!Item.isValidItem(itemID)) {
-								if(p.buy.getKey(split[4]) != null) {
-									itemID = Integer.parseInt(p.buy.getKey(split[4]).toString());
+								if(p.buy.getKey(split[3]) != null) {
+									itemID = Integer.parseInt(p.buy.getKey(split[3]).toString());
 								} else {
 									player.sendMessage(Colors.Rose + "Invalid item!");
 									return true;
@@ -2166,19 +2164,18 @@ public class iConomy extends Plugin {
 						}
 
 						// 7
-						if(split.length >= 8) {
-							min = Integer.parseInt(split[7]);
+						if(split.length >= 7) {
+							min = Integer.parseInt(split[8]);
 
 							if(min < 3) {
-								log.info(player+"-"+name+"-"+interval+"-"+itemID+"-"+amount+"-"+start+"-"+min+"-"+max+"");
 								player.sendMessage(Colors.Rose + "Min cannot be lower than 2!");
 								return true;
 							}
 						}
 
 						// 9
-						if(split.length >= 9) {
-							max = Integer.parseInt(split[8]);
+						if(split.length >= 8) {
+							max = Integer.parseInt(split[7]);
 
 							if(max < 4) {
 								player.sendMessage(Colors.Rose + "Max cannot be lower than 3!");
@@ -2189,9 +2186,9 @@ public class iConomy extends Plugin {
 							}
 						}
 
-						log.info(player+"-"+name+"-"+interval+"-"+itemID+"-"+amount+"-"+start+"-"+min+"-"+max+"");
+						log.info(player+"-"+interval+"-"+itemID+"-"+amount+"-"+start+"-"+min+"-"+max+"");
 
-						if(p.startAuction(player, name, interval, itemID, amount, start, min, max)) {
+						if(p.startAuction(player, interval, itemID, amount, start, min, max)) {
 							player.sendMessage(Colors.Yellow + "Auction has begun.");
 							p.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Gold + player.getName() + Colors.Yellow + " started a new auction.");
 							p.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Gold + player.getName() + Colors.Yellow + " Item: ["+Colors.Gray + amount + Colors.Yellow + "] " + Colors.Gray + itemName);
