@@ -2079,7 +2079,7 @@ public class iConomy extends Plugin {
 								return true;
 							}
 
-							if(amount > p.getBalance(player)) {
+							if(amount+p.auctionCurAmount > p.getBalance(player)) {
 								player.sendMessage(Colors.Rose + "You cannot bid more than you have!");
 								p.showBalance(player.getName(), player, true);
 								return true;
@@ -2136,7 +2136,7 @@ public class iConomy extends Plugin {
 								return true;
 							}
 
-							if(amount > p.getBalance(player)) {
+							if(amount+p.auctionCurAmount > p.getBalance(player)) {
 								player.sendMessage(Colors.Rose + "You cannot bid more than you have!");
 								p.showBalance(player.getName(), player, true);
 								return true;
