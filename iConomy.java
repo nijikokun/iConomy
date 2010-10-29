@@ -149,11 +149,11 @@ public class iConomy extends Plugin {
 			}
 
 			if (this.can(player, "credit")) {
-				player.sendMessage(Colors.Rose + "/money -c|credit <p> <a> - Give a player money");
+				player.sendMessage(Colors.Rose + "/money -c|credit <a> <p> - Give a player money");
 			}
 
 			if (this.can(player, "debit")) {
-				player.sendMessage(Colors.Rose + "/money -d|debit <a> <p> - Take a players money");
+				player.sendMessage(Colors.Rose + "/money -d|debit <p> <a> - Take a players money");
 			}
 
 			if (this.can(player, "rank")) {
