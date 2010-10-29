@@ -94,7 +94,7 @@ public class iConomy extends Plugin {
 	// Versioning
 	private String version = "0.9";
 	private String sversion = "0.4";
-	private String aversion = "0.1a";
+	private String aversion = "0.2";
 
 	public iConomy() {
 		this.props = null;
@@ -194,7 +194,7 @@ public class iConomy extends Plugin {
 			player.sendMessage(Colors.Rose + "---------------");
 			player.sendMessage(Colors.Rose + "<i> = item, <a> = amount");
 			player.sendMessage(Colors.Rose + "---------------");
-			player.sendMessage(Colors.Rose + "/auction - Shows amount per item for sell/buy");
+			player.sendMessage(Colors.Rose + "/auction - Shows current auction details or auction running information.");
 
 			if(this.can(player, "auction"))
 				player.sendMessage(Colors.Rose + "/auction -s|start <time-seconds> <item> <amount> <start-bid>");
