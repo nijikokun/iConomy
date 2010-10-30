@@ -43,6 +43,10 @@ public final class iProperty {
 		}
 	}
 
+	public void removeKey(String key) {
+		this.properties.remove(key);
+	}
+
 	public boolean keyExists(String key) {
 		return this.properties.containsKey(key);
 	}
