@@ -930,6 +930,13 @@ public class iConomy extends Plugin {
 			return true;
 		}
 
+		if(!bag.hasItem(itemId, needsAmount*amount, 6400)){
+			player.sendMessage(Colors.Rose + String.format(this.sellInvalidAmount, needsAmount));
+			log.info("[iConomy Shop] " + "Player " + player.getName() + " attempted to sell [" + amount + "] bundles of [" + itemId + "].");
+			this.shopLog("sell", player.getName() + "|0|203|" + itemId + "|" + amount);
+			return true;
+		}
+
 		int itemAmount = this.itemCost("sell", cInt(itemId), amount, false);
 
 		if (itemAmount != 0) {
@@ -956,7 +963,7 @@ public class iConomy extends Plugin {
 			}
 
 			// Total
-			int total = this.itemCost("sell", cInt(itemId), sold, true);
+			int total = this.itemCost("sell", cInt(itemId), (sold/needsAmount), true);
 			String totalAmount = total + this.moneyName;
 
 			// Send Message
