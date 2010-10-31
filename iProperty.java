@@ -45,6 +45,7 @@ public final class iProperty {
 
 	public void removeKey(String key) {
 		this.properties.remove(key);
+		save();
 	}
 
 	public boolean keyExists(String key) {

@@ -24,8 +24,7 @@ public class iConomy extends Plugin {
 	private iProperty auctions;
 	private iProperty auctioner;
 	// Hashmaps for items
-	BidiMap sell = new TreeBidiMap();
-	BidiMap buy = new TreeBidiMap();
+	BidiMap items = new TreeBidiMap();
 	// Data Control
 	public iData data;
 	// Ranking
@@ -292,335 +291,175 @@ public class iConomy extends Plugin {
 		this.data = new iData(this.mysql, this.startingBalance, this.driver, this.user, this.pass, this.db);
 
 		// Buying
-		buy.put("1", "stone");
-		buy.put("2", "grass");
-		buy.put("3", "dirt");
-		buy.put("4", "cobblestone");
-		buy.put("5", "wood");
-		buy.put("6", "sapling");
-		buy.put("7", "bedrock");
-		buy.put("8", "water");
-		buy.put("9", "still-water");
-		buy.put("10", "lava");
-		buy.put("11", "still-lava");
-		buy.put("12", "sand");
-		buy.put("13", "gravel");
-		buy.put("14", "gold-ore");
-		buy.put("15", "iron-ore");
-		buy.put("16", "coal-ore");
-		buy.put("17", "log");
-		buy.put("18", "leaves");
-		buy.put("19", "sponge");
-		buy.put("20", "glass");
-		buy.put("35", "gray-cloth");
-		buy.put("37", "yellow-flower");
-		buy.put("38", "red-rose");
-		buy.put("39", "brown-mushroom");
-		buy.put("40", "red-mushroom");
-		buy.put("41", "gold-block");
-		buy.put("42", "iron-block");
-		buy.put("43", "double-step");
-		buy.put("44", "step");
-		buy.put("45", "brick");
-		buy.put("46", "tnt");
-		buy.put("47", "bookcase");
-		buy.put("48", "mossy-cobblestone");
-		buy.put("49", "obsidian");
-		buy.put("50", "torch");
-		buy.put("51", "fire");
-		buy.put("52", "mob-spawner");
-		buy.put("53", "wooden-stairs");
-		buy.put("54", "chest");
-		buy.put("55", "redstone-wire");
-		buy.put("56", "diamond-ore");
-		buy.put("57", "diamond-block");
-		buy.put("58", "workbench");
-		buy.put("59", "crops");
-		buy.put("60", "soil");
-		buy.put("61", "furnace");
-		buy.put("62", "burning-furnace");
-		buy.put("63", "sign-post");
-		buy.put("64", "wooden-door");
-		buy.put("65", "ladder");
-		buy.put("66", "mine-cart-tracks");
-		buy.put("67", "cobblestone-stairs");
-		buy.put("68", "wall-sign");
-		buy.put("69", "lever");
-		buy.put("70", "stone-pressure-plate");
-		buy.put("71", "iron-door");
-		buy.put("72", "wooden-pressure-plate");
-		buy.put("73", "redstone-ore");
-		buy.put("74", "glowing-redstone-ore");
-		buy.put("75", "redstone-torch-off");
-		buy.put("76", "redstone-torch-on");
-		buy.put("77", "stone-button");
-		buy.put("78", "snow");
-		buy.put("79", "ice");
-		buy.put("80", "snow-block");
-		buy.put("81", "cactus");
-		buy.put("82", "clay");
-		buy.put("83", "reed");
-		buy.put("84", "jukebox");
-		buy.put("85", "fence");
-		buy.put("256", "iron-spade");
-		buy.put("257", "iron-pickaxe");
-		buy.put("258", "iron-axe");
-		buy.put("259", "steel-and-flint");
-		buy.put("260", "apple");
-		buy.put("261", "bow");
-		buy.put("262", "arrow");
-		buy.put("263", "coal");
-		buy.put("264", "diamond");
-		buy.put("265", "iron-ingot");
-		buy.put("266", "gold-ingot");
-		buy.put("267", "iron-sword");
-		buy.put("268", "wooden-sword");
-		buy.put("269", "wooden-spade");
-		buy.put("270", "wooden-pickaxe");
-		buy.put("271", "wooden-axe");
-		buy.put("272", "stone-sword");
-		buy.put("273", "stone-spade");
-		buy.put("274", "stone-pickaxe");
-		buy.put("275", "stone-axe");
-		buy.put("276", "diamond-sword");
-		buy.put("277", "diamond-spade");
-		buy.put("278", "diamond-pickaxe");
-		buy.put("279", "diamond-axe");
-		buy.put("280", "stick");
-		buy.put("281", "bowl");
-		buy.put("282", "mushroom-soup");
-		buy.put("283", "gold-sword");
-		buy.put("284", "gold-spade");
-		buy.put("285", "gold-pickaxe");
-		buy.put("286", "gold-axe");
-		buy.put("287", "string");
-		buy.put("288", "feather");
-		buy.put("289", "gunpowder");
-		buy.put("290", "wooden-hoe");
-		buy.put("291", "stone-hoe");
-		buy.put("292", "iron-hoe");
-		buy.put("293", "diamond-hoe");
-		buy.put("294", "gold-hoe");
-		buy.put("295", "seeds");
-		buy.put("296", "wheat");
-		buy.put("297", "bread");
-		buy.put("298", "leather-helmet");
-		buy.put("299", "leather-chestplate");
-		buy.put("300", "leather-pants");
-		buy.put("301", "leather-boots");
-		buy.put("302", "chainmail-helmet");
-		buy.put("303", "chainmail-chestplate");
-		buy.put("304", "chainmail-pants");
-		buy.put("305", "chainmail-boots");
-		buy.put("306", "iron-helmet");
-		buy.put("307", "iron-chestplate");
-		buy.put("308", "iron-pants");
-		buy.put("309", "iron-boots");
-		buy.put("310", "diamond-helmet");
-		buy.put("311", "diamond-chestplate");
-		buy.put("312", "diamond-pants");
-		buy.put("313", "diamond-boots");
-		buy.put("314", "gold-helmet");
-		buy.put("315", "gold-chestplate");
-		buy.put("316", "gold-pants");
-		buy.put("317", "gold-boots");
-		buy.put("318", "flint");
-		buy.put("319", "pork");
-		buy.put("320", "grilled-pork");
-		buy.put("321", "painting");
-		buy.put("322", "golden-apple");
-		buy.put("323", "sign");
-		buy.put("324", "wooden-door");
-		buy.put("325", "bucket");
-		buy.put("326", "water-bucket");
-		buy.put("327", "lava-bucket");
-		buy.put("328", "mine-cart");
-		buy.put("329", "saddle");
-		buy.put("330", "iron-door");
-		buy.put("331", "redstone");
-		buy.put("332", "snowball");
-		buy.put("333", "boat");
-		buy.put("334", "leather");
-		buy.put("335", "milk-bucket");
-		buy.put("336", "clay-brick");
-		buy.put("337", "clay-balls");
-		buy.put("338", "reed");
-		buy.put("339", "paper");
-		buy.put("340", "book");
-		buy.put("341", "slime-ball");
-		buy.put("342", "storage-mine-cart");
-		buy.put("343", "powered-mine-cart");
-		buy.put("344", "egg");
-		buy.put("345", "compass");
-		buy.put("346", "fishing-rod");
-		buy.put("2256", "gold-record");
-		buy.put("2257", "green-record");
-
-		// Selling
-		sell.put("1", "stone");
-		sell.put("2", "grass");
-		sell.put("3", "dirt");
-		sell.put("4", "cobblestone");
-		sell.put("5", "wood");
-		sell.put("6", "sapling");
-		sell.put("7", "bedrock");
-		sell.put("8", "water");
-		sell.put("9", "still-water");
-		sell.put("10", "lava");
-		sell.put("11", "still-lava");
-		sell.put("12", "sand");
-		sell.put("13", "gravel");
-		sell.put("14", "gold-ore");
-		sell.put("15", "iron-ore");
-		sell.put("16", "coal-ore");
-		sell.put("17", "log");
-		sell.put("18", "leaves");
-		sell.put("19", "sponge");
-		sell.put("20", "glass");
-		sell.put("35", "gray-cloth");
-		sell.put("37", "yellow-flower");
-		sell.put("38", "red-rose");
-		sell.put("39", "brown-mushroom");
-		sell.put("40", "red-mushroom");
-		sell.put("41", "gold-block");
-		sell.put("42", "iron-block");
-		sell.put("43", "double-step");
-		sell.put("44", "step");
-		sell.put("45", "brick");
-		sell.put("46", "tnt");
-		sell.put("47", "bookcase");
-		sell.put("48", "mossy-cobblestone");
-		sell.put("49", "obsidian");
-		sell.put("50", "torch");
-		sell.put("51", "fire");
-		sell.put("52", "mob-spawner");
-		sell.put("53", "wooden-stairs");
-		sell.put("54", "chest");
-		sell.put("55", "redstone-wire");
-		sell.put("56", "diamond-ore");
-		sell.put("57", "diamond-block");
-		sell.put("58", "workbench");
-		sell.put("59", "crops");
-		sell.put("60", "soil");
-		sell.put("61", "furnace");
-		sell.put("62", "burning-furnace");
-		sell.put("63", "sign-post");
-		sell.put("64", "wooden-door");
-		sell.put("65", "ladder");
-		sell.put("66", "mine-cart-tracks");
-		sell.put("67", "cobblestone-stairs");
-		sell.put("68", "wall-sign");
-		sell.put("69", "lever");
-		sell.put("70", "stone-pressure-plate");
-		sell.put("71", "iron-door");
-		sell.put("72", "wooden-pressure-plate");
-		sell.put("73", "redstone-ore");
-		sell.put("74", "glowing-redstone-ore");
-		sell.put("75", "redstone-torch-off");
-		sell.put("76", "redstone-torch-on");
-		sell.put("77", "stone-button");
-		sell.put("78", "snow");
-		sell.put("79", "ice");
-		sell.put("80", "snow-block");
-		sell.put("81", "cactus");
-		sell.put("82", "clay");
-		sell.put("83", "reed");
-		sell.put("84", "jukebox");
-		sell.put("85", "fence");
-		sell.put("256", "iron-spade");
-		sell.put("257", "iron-pickaxe");
-		sell.put("258", "iron-axe");
-		sell.put("259", "steel-and-flint");
-		sell.put("260", "apple");
-		sell.put("261", "bow");
-		sell.put("262", "arrow");
-		sell.put("263", "coal");
-		sell.put("264", "diamond");
-		sell.put("265", "iron-ingot");
-		sell.put("266", "gold-ingot");
-		sell.put("267", "iron-sword");
-		sell.put("268", "wooden-sword");
-		sell.put("269", "wooden-spade");
-		sell.put("270", "wooden-pickaxe");
-		sell.put("271", "wooden-axe");
-		sell.put("272", "stone-sword");
-		sell.put("273", "stone-spade");
-		sell.put("274", "stone-pickaxe");
-		sell.put("275", "stone-axe");
-		sell.put("276", "diamond-sword");
-		sell.put("277", "diamond-spade");
-		sell.put("278", "diamond-pickaxe");
-		sell.put("279", "diamond-axe");
-		sell.put("280", "stick");
-		sell.put("281", "bowl");
-		sell.put("282", "mushroom-soup");
-		sell.put("283", "gold-sword");
-		sell.put("284", "gold-spade");
-		sell.put("285", "gold-pickaxe");
-		sell.put("286", "gold-axe");
-		sell.put("287", "string");
-		sell.put("288", "feather");
-		sell.put("289", "gunpowder");
-		sell.put("290", "wooden-hoe");
-		sell.put("291", "stone-hoe");
-		sell.put("292", "iron-hoe");
-		sell.put("293", "diamond-hoe");
-		sell.put("294", "gold-hoe");
-		sell.put("295", "seeds");
-		sell.put("296", "wheat");
-		sell.put("297", "bread");
-		sell.put("298", "leather-helmet");
-		sell.put("299", "leather-chestplate");
-		sell.put("300", "leather-pants");
-		sell.put("301", "leather-boots");
-		sell.put("302", "chainmail-helmet");
-		sell.put("303", "chainmail-chestplate");
-		sell.put("304", "chainmail-pants");
-		sell.put("305", "chainmail-boots");
-		sell.put("306", "iron-helmet");
-		sell.put("307", "iron-chestplate");
-		sell.put("308", "iron-pants");
-		sell.put("309", "iron-boots");
-		sell.put("310", "diamond-helmet");
-		sell.put("311", "diamond-chestplate");
-		sell.put("312", "diamond-pants");
-		sell.put("313", "diamond-boots");
-		sell.put("314", "gold-helmet");
-		sell.put("315", "gold-chestplate");
-		sell.put("316", "gold-pants");
-		sell.put("317", "gold-boots");
-		sell.put("318", "flint");
-		sell.put("319", "pork");
-		sell.put("320", "grilled-pork");
-		sell.put("321", "painting");
-		sell.put("322", "golden-apple");
-		sell.put("323", "sign");
-		sell.put("324", "wooden-door");
-		sell.put("325", "bucket");
-		sell.put("326", "water-bucket");
-		sell.put("327", "lava-bucket");
-		sell.put("328", "mine-cart");
-		sell.put("329", "saddle");
-		sell.put("330", "iron-door");
-		sell.put("331", "redstone");
-		sell.put("332", "snowball");
-		sell.put("333", "boat");
-		sell.put("334", "leather");
-		sell.put("335", "milk-bucket");
-		sell.put("336", "clay-brick");
-		sell.put("337", "clay-balls");
-		sell.put("338", "reed");
-		sell.put("339", "paper");
-		sell.put("340", "book");
-		sell.put("341", "slime-ball");
-		sell.put("342", "storage-mine-cart");
-		sell.put("343", "powered-mine-cart");
-		sell.put("344", "egg");
-		sell.put("345", "compass");
-		sell.put("346", "fishing-rod");
-		sell.put("2256", "gold-record");
-		sell.put("2257", "green-record");
-
+		items.put("1", "stone");
+		items.put("2", "grass");
+		items.put("3", "dirt");
+		items.put("4", "cobblestone");
+		items.put("5", "wood");
+		items.put("6", "sapling");
+		items.put("7", "bedrock");
+		items.put("8", "water");
+		items.put("9", "still-water");
+		items.put("10", "lava");
+		items.put("11", "still-lava");
+		items.put("12", "sand");
+		items.put("13", "gravel");
+		items.put("14", "gold-ore");
+		items.put("15", "iron-ore");
+		items.put("16", "coal-ore");
+		items.put("17", "log");
+		items.put("18", "leaves");
+		items.put("19", "sponge");
+		items.put("20", "glass");
+		items.put("35", "gray-cloth");
+		items.put("37", "yellow-flower");
+		items.put("38", "red-rose");
+		items.put("39", "brown-mushroom");
+		items.put("40", "red-mushroom");
+		items.put("41", "gold-block");
+		items.put("42", "iron-block");
+		items.put("43", "double-step");
+		items.put("44", "step");
+		items.put("45", "brick");
+		items.put("46", "tnt");
+		items.put("47", "bookcase");
+		items.put("48", "mossy-cobblestone");
+		items.put("49", "obsidian");
+		items.put("50", "torch");
+		items.put("51", "fire");
+		items.put("52", "mob-spawner");
+		items.put("53", "wooden-stairs");
+		items.put("54", "chest");
+		items.put("55", "redstone-wire");
+		items.put("56", "diamond-ore");
+		items.put("57", "diamond-block");
+		items.put("58", "workbench");
+		items.put("59", "crops");
+		items.put("60", "soil");
+		items.put("61", "furnace");
+		items.put("62", "burning-furnace");
+		items.put("63", "sign-post");
+		items.put("64", "wooden-door");
+		items.put("65", "ladder");
+		items.put("66", "mine-cart-tracks");
+		items.put("67", "cobblestone-stairs");
+		items.put("68", "wall-sign");
+		items.put("69", "lever");
+		items.put("70", "stone-pressure-plate");
+		items.put("71", "iron-door");
+		items.put("72", "wooden-pressure-plate");
+		items.put("73", "redstone-ore");
+		items.put("74", "glowing-redstone-ore");
+		items.put("75", "redstone-torch-off");
+		items.put("76", "redstone-torch-on");
+		items.put("77", "stone-button");
+		items.put("78", "snow");
+		items.put("79", "ice");
+		items.put("80", "snow-block");
+		items.put("81", "cactus");
+		items.put("82", "clay");
+		items.put("83", "reed");
+		items.put("84", "jukebox");
+		items.put("85", "fence");
+		items.put("86", "pumpkin");
+		items.put("87", "red-mossy-cobblestone");
+		items.put("88", "mud");
+		items.put("89", "brittle-gold");
+		items.put("90", "portal");
+		items.put("91", "jack-o-lantern");
+		items.put("256", "iron-spade");
+		items.put("257", "iron-pickaxe");
+		items.put("258", "iron-axe");
+		items.put("259", "steel-and-flint");
+		items.put("260", "apple");
+		items.put("261", "bow");
+		items.put("262", "arrow");
+		items.put("263", "coal");
+		items.put("264", "diamond");
+		items.put("265", "iron-ingot");
+		items.put("266", "gold-ingot");
+		items.put("267", "iron-sword");
+		items.put("268", "wooden-sword");
+		items.put("269", "wooden-spade");
+		items.put("270", "wooden-pickaxe");
+		items.put("271", "wooden-axe");
+		items.put("272", "stone-sword");
+		items.put("273", "stone-spade");
+		items.put("274", "stone-pickaxe");
+		items.put("275", "stone-axe");
+		items.put("276", "diamond-sword");
+		items.put("277", "diamond-spade");
+		items.put("278", "diamond-pickaxe");
+		items.put("279", "diamond-axe");
+		items.put("280", "stick");
+		items.put("281", "bowl");
+		items.put("282", "mushroom-soup");
+		items.put("283", "gold-sword");
+		items.put("284", "gold-spade");
+		items.put("285", "gold-pickaxe");
+		items.put("286", "gold-axe");
+		items.put("287", "string");
+		items.put("288", "feather");
+		items.put("289", "gunpowder");
+		items.put("290", "wooden-hoe");
+		items.put("291", "stone-hoe");
+		items.put("292", "iron-hoe");
+		items.put("293", "diamond-hoe");
+		items.put("294", "gold-hoe");
+		items.put("295", "seeds");
+		items.put("296", "wheat");
+		items.put("297", "bread");
+		items.put("298", "leather-helmet");
+		items.put("299", "leather-chestplate");
+		items.put("300", "leather-pants");
+		items.put("301", "leather-boots");
+		items.put("302", "chainmail-helmet");
+		items.put("303", "chainmail-chestplate");
+		items.put("304", "chainmail-pants");
+		items.put("305", "chainmail-boots");
+		items.put("306", "iron-helmet");
+		items.put("307", "iron-chestplate");
+		items.put("308", "iron-pants");
+		items.put("309", "iron-boots");
+		items.put("310", "diamond-helmet");
+		items.put("311", "diamond-chestplate");
+		items.put("312", "diamond-pants");
+		items.put("313", "diamond-boots");
+		items.put("314", "gold-helmet");
+		items.put("315", "gold-chestplate");
+		items.put("316", "gold-pants");
+		items.put("317", "gold-boots");
+		items.put("318", "flint");
+		items.put("319", "pork");
+		items.put("320", "grilled-pork");
+		items.put("321", "painting");
+		items.put("322", "golden-apple");
+		items.put("323", "sign");
+		items.put("324", "wooden-door");
+		items.put("325", "bucket");
+		items.put("326", "water-bucket");
+		items.put("327", "lava-bucket");
+		items.put("328", "mine-cart");
+		items.put("329", "saddle");
+		items.put("330", "iron-door");
+		items.put("331", "redstone");
+		items.put("332", "snowball");
+		items.put("333", "boat");
+		items.put("334", "leather");
+		items.put("335", "milk-bucket");
+		items.put("336", "clay-brick");
+		items.put("337", "clay-balls");
+		items.put("338", "reed");
+		items.put("339", "paper");
+		items.put("340", "book");
+		items.put("341", "slime-ball");
+		items.put("342", "storage-mine-cart");
+		items.put("343", "powered-mine-cart");
+		items.put("344", "egg");
+		items.put("345", "compass");
+		items.put("346", "fishing-rod");
+		items.put("2256", "gold-record");
+		items.put("2257", "green-record");
 
 		// Setup Listing
 		this.rankedList = new LinkedList();
@@ -680,7 +519,7 @@ public class iConomy extends Plugin {
 			}
 		} else if (type.equalsIgnoreCase("buy") && this.logBuy) {
 			try {
-				FileWriter fstream = new FileWriter("iConomy-iBuy.log", true);
+				FileWriter fstream = new FileWriter("iConomy-iitems.log", true);
 				BufferedWriter out = new BufferedWriter(fstream);
 				out.write(date + "|" + data);
 				out.newLine();
@@ -690,7 +529,7 @@ public class iConomy extends Plugin {
 			}
 		} else if (type.equalsIgnoreCase("sell") && this.logSell) {
 			try {
-				FileWriter fstream = new FileWriter("iConomy-iSell.log", true);
+				FileWriter fstream = new FileWriter("iConomy-iitems.log", true);
 				BufferedWriter out = new BufferedWriter(fstream);
 				out.write(date + "|" + data);
 				out.newLine();
@@ -750,9 +589,9 @@ public class iConomy extends Plugin {
 			String info = "";
 
 			if (type.equals("buy")) {
-				info = this.buying.getString((String) this.buy.get(itemId));
+				info = this.buying.getString((String) this.items.get(itemId));
 			} else if (type.equals("sell")) {
-				info = this.selling.getString((String) this.sell.get(itemId));
+				info = this.selling.getString((String) this.items.get(itemId));
 			}
 
 			if (info.equals("")) {
@@ -839,9 +678,9 @@ public class iConomy extends Plugin {
 			return cost;
 		} else {
 			if (type.equals("buy")) {
-				info = this.buying.getString((String) this.buy.get(itemId));
+				info = this.buying.getString((String) this.items.get(itemId));
 			} else if (type.equals("sell")) {
-				info = this.selling.getString((String) this.sell.get(itemId));
+				info = this.selling.getString((String) this.items.get(itemId));
 			}
 
 			if (info.equals("")) {
@@ -878,6 +717,12 @@ public class iConomy extends Plugin {
 	public boolean doPurchase(Player player, int itemId, int amount) {
 		int itemAmount = this.itemCost("buy", cInt(itemId), amount, false);
 		int needsAmount = this.itemNeedsAmount("buy", cInt(itemId));
+
+		if(this.data.getBalance(player.getName()) < itemAmount){
+			player.sendMessage(Colors.Rose + this.buyNotEnough);
+			log.info("[iConomy Shop] " + "Player " + player.getName() + " attempted to buy more [" + itemId + "] [" + amount + "] than they have in "+this.moneyName+" [" + itemAmount + "].");
+			this.shopLog("buy", player.getName() + "|0|203|" + itemId + "|" + amount + "|" + itemAmount + this.moneyName);
+		}
 
 		if (!this.itemCan("buy", cInt(itemId), amount)) {
 			player.sendMessage(Colors.Rose + String.format(this.buyInvalidAmount, needsAmount));
@@ -2083,7 +1928,7 @@ public class iConomy extends Plugin {
 			if (split[0].equalsIgnoreCase("/auction") && p.auction) {
 				if ((split.length < 2)) {
 					if(p.auctionTimerRunning) {
-						String itemName = (String) p.buy.get(cInt(p.auctionItem));
+						String itemName = (String) p.items.get(cInt(p.auctionItem));
 						itemName.replace("-", " ");
 						player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+ Colors.Yellow + " Started by " + Colors.Gold + p.auctionStarter + Colors.Yellow + " Currently Winning: " + Colors.Gold + ((p.auctionCurName == null) ? "Nobody" : p.auctionCurName));
 						player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Gold + player.getName() + Colors.Yellow + " Item: ["+Colors.LightGray + p.auctionAmount + Colors.Yellow + "] " + Colors.LightGray + itemName);
@@ -2290,15 +2135,15 @@ public class iConomy extends Plugin {
 							}
 
 							if (!Item.isValidItem(itemID)) {
-								if(p.buy.getKey(split[3]) != null) {
-									itemID = Integer.parseInt(p.buy.getKey(split[3]).toString());
+								if(p.items.getKey(split[3]) != null) {
+									itemID = Integer.parseInt(p.items.getKey(split[3]).toString());
 								} else {
 									player.sendMessage(Colors.Rose + "Invalid item!");
 									return true;
 								}
 							}
 
-							itemName = (String) p.buy.get(cInt(itemID));
+							itemName = (String) p.items.get(cInt(itemID));
 							itemName.replace("-", " ");
 
 							if(amount < 1) {
@@ -2383,8 +2228,8 @@ public class iConomy extends Plugin {
 						}
 
 						if (!Item.isValidItem(itemID)) {
-							if(p.buy.getKey(split[1]) != null) {
-								itemID = Integer.parseInt(p.buy.getKey(split[1]).toString());
+							if(p.items.getKey(split[1]) != null) {
+								itemID = Integer.parseInt(p.items.getKey(split[1]).toString());
 							} else {
 								player.sendMessage(Colors.Rose + "Invalid item!");
 								return true;
@@ -2447,8 +2292,8 @@ public class iConomy extends Plugin {
 						}
 
 						if (!Item.isValidItem(itemID)) {
-							if(p.buy.getKey(split[2]) != null) {
-								itemID = Integer.parseInt(p.buy.getKey(split[2]).toString());
+							if(p.items.getKey(split[2]) != null) {
+								itemID = Integer.parseInt(p.items.getKey(split[2]).toString());
 							} else {
 								player.sendMessage(Colors.Rose + "Invalid item!");
 								return true;
@@ -2485,8 +2330,8 @@ public class iConomy extends Plugin {
 						}
 
 						if (!Item.isValidItem(itemID)) {
-							if(p.buy.getKey(split[2]) != null) {
-								itemID = Integer.parseInt(p.buy.getKey(split[2]).toString());
+							if(p.items.getKey(split[2]) != null) {
+								itemID = Integer.parseInt(p.items.getKey(split[2]).toString());
 							} else {
 								player.sendMessage(Colors.Rose + "Invalid item!");
 								return true;
@@ -2528,8 +2373,8 @@ public class iConomy extends Plugin {
 							player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, ?");
 							return true;
 						} else if(!Item.isValidItem(itemID)) {
-							if(p.buy.getKey(split[1]) != null) {
-								itemID = Integer.parseInt(p.buy.getKey(split[1]).toString());
+							if(p.items.getKey(split[1]) != null) {
+								itemID = Integer.parseInt(p.items.getKey(split[1]).toString());
 							} else {
 								player.sendMessage(Colors.Rose + "Usage: /shop [command|item|itemID] [item] [amount]");
 								player.sendMessage(Colors.Rose + "    Commands: buy, sell, help");
@@ -2593,8 +2438,8 @@ public class iConomy extends Plugin {
 						}
 
 						if (!Item.isValidItem(itemID)) {
-							if(p.buy.getKey(split[2]) != null) {
-								itemID = Integer.parseInt(p.buy.getKey(split[2]).toString());
+							if(p.items.getKey(split[2]) != null) {
+								itemID = Integer.parseInt(p.items.getKey(split[2]).toString());
 							} else {
 								player.sendMessage(Colors.Rose + "Invalid item!");
 								return true;
@@ -2638,8 +2483,8 @@ public class iConomy extends Plugin {
 						}
 
 						if (!Item.isValidItem(itemID)) {
-							if(p.buy.getKey(split[2]) != null) {
-								itemID = Integer.parseInt(p.buy.getKey(split[2]).toString());
+							if(p.items.getKey(split[2]) != null) {
+								itemID = Integer.parseInt(p.items.getKey(split[2]).toString());
 							} else {
 								player.sendMessage(Colors.Rose + "Invalid item!");
 								return true;
