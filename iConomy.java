@@ -11,24 +11,29 @@ import org.apache.commons.collections.bidimap.*;
 import java.sql.*;
 
 public class iConomy extends Plugin {
-
 	protected static final Logger log = Logger.getLogger("Minecraft");
 	private Listener l = new Listener(this);
+
 	// Directory
 	private String directory = "iConomy/";
 	private String lDirectory = "logs/";
+
 	// Property Files
 	private iProperty props;
 	private iProperty buying;
 	private iProperty selling;
 	private iProperty auctions;
 	private iProperty auctioner;
+
 	// Hashmaps for items
 	BidiMap items = new TreeBidiMap();
+
 	// Data Control
 	public iData data;
+
 	// Ranking
 	private LinkedList<String> rankedList;
+
 	// Money Settings
 	private int moneyGive = 0;
 	private int moneyGiveInterval = 0;
@@ -37,6 +42,7 @@ public class iConomy extends Plugin {
 	private Timer mTime1;
 	private Timer mTime2;
 	public String moneyName;
+
 	// Permissions
 	public String canPay;
 	public String canCredit;
@@ -50,10 +56,12 @@ public class iConomy extends Plugin {
 	public String canAuction;
 	public String canBid;
 	public String canEnd;
+
 	// Shop Details
 	public boolean auction;
 	public boolean globalShop;
 	public boolean physicalShop;
+
 	// Auction settings
 	public Timer auctionTimer = new Timer();
 	boolean auctionTimerRunning;
@@ -64,16 +72,19 @@ public class iConomy extends Plugin {
 	public int auctionItem = 0;
 	public int auctionAmount = 0;
 	public int auctionMin = 0;
-	public int auctionMax = 0;
+	public int auctionReserve = 0;
 	public String auctionCurName;
 	public int auctionCurAmount = 0;
 	public int auctionCurBid = 0;
 	public int auctionCurBidCount = 0;
+	public int auctionCurSecretBid = 0;
+
 	// Buying Template
 	public String buyInvalidAmount;
 	public String buyNotEnough;
 	public String buyReject;
 	public String buyGive;
+
 	// Selling Template
 	public String sellInvalidAmount;
 	public String sellReject;
@@ -81,16 +92,20 @@ public class iConomy extends Plugin {
 	public String sellGive;
 	public String sellNone;
 	public Integer startingBalance;
+	public boolean auctionReserveMet;
+
 	// Logging
 	public boolean logPay;
 	public boolean logBuy;
 	public boolean logSell;
+
 	// Database
 	private boolean mysql;
 	private String driver;
 	private String user;
 	private String pass;
 	private String db;
+
 	// Versioning
 	private String version = "0.9";
 	private String sversion = "0.4";
@@ -1088,11 +1103,12 @@ public class iConomy extends Plugin {
 		this.auctionAmount = itemAmount;
 		this.auctionStarter = player.getName();
 		this.auctionCurBid = 0;
+		this.auctionCurSecretBid = 0;
 		this.auctionCurAmount = startingBid;
 		this.auctionStartingBid = startingBid;
 		this.auctionCurBidCount = 0;
 		this.auctionMin = minBid;
-		this.auctionMax = maxBid;
+		this.auctionReserve = maxBid;
 
 		// Setup finals
 		final iConomy iHateJava = this;
@@ -1126,26 +1142,72 @@ public class iConomy extends Plugin {
 		return true;
 	}
 
-	public void bidAuction(Player player, int amount) {
-		if(this.auctionCurBid != 0 && this.auctionCurAmount != this.auctionStartingBid) {
-			Player previous = this.getPlayer(this.auctionCurName);
-			if(previous != null) {
-				previous.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + "You have been outbid!");
+	public void bidAuction(Player player, int amount, int secret) {
+		Boolean outbid = true;
+		if(this.auctionAmount < amount) {
+			if(this.auctionCurBid != 0 && this.auctionCurAmount != this.auctionStartingBid) {
+				if(amount < this.auctionCurSecretBid) {
+					if(secret != 0 && secret > this.auctionCurSecretBid) {
+						if(secret == this.auctionCurSecretBid) {
+							amount = secret;
+							secret = 0;
+						} else {
+							amount = this.auctionCurSecretBid+1;
+						}
+					} else {
+						outbid = false;
+					}
+
+					if(!outbid) {
+						this.auctionCurBid = amount+1;
+						this.auctionCurAmount = amount+1;
+						this.auctionCurBidCount += 1;
+
+						if(this.auctionCurBid == this.auctionCurSecretBid) {
+							Player previous = this.getPlayer(this.auctionCurName);
+
+							if(previous != null) {
+								previous.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + "has reached your secret amount!");
+							}
+						}
+
+						this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] has been raised to " + Colors.Green + this.auctionCurAmount + this.moneyName + Colors.LightGray + "!");
+						player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + "You have been outbid by "+ Colors.Green + this.auctionCurName + Colors.LightGray + " secret bid!");
+					} else {
+						Player previous = this.getPlayer(this.auctionCurName);
+
+						if(previous != null) {
+							previous.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + "You have been outbid!");
+						}
+					}
+				} else {
+					Player previous = this.getPlayer(this.auctionCurName);
+
+					if(previous != null) {
+						previous.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + "You have been outbid!");
+					}
+				}
 			}
-		}
 
-		this.auctionCurBid = amount;
-		this.auctionCurAmount += amount;
-		this.auctionCurName = player.getName();
-		this.auctionCurBidCount += 1;
+			if(outbid) {
+				this.auctionCurBid = amount;
+				this.auctionCurSecretBid = (secret == 0) ? amount : secret;
+				this.auctionCurAmount = amount;
+				this.auctionCurName = player.getName();
+				this.auctionCurBidCount += 1;
+			}
 
-		if(this.auctionCurAmount >= this.auctionMax && this.auctionMax != 0) {
-			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + this.auctionCurName + Colors.LightGray + " hit the set max! " + Colors.Yellow + "Auction Ending!");
-			this.endAuction();
+			if(this.auctionCurAmount >= this.auctionReserve && this.auctionReserve != 0 && !this.auctionReserveMet) {
+				this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + this.auctionCurName + Colors.LightGray + " reserve has been met!");
+				this.auctionReserveMet = true;
+			} else {
+				if(outbid) {
+					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + this.auctionCurName + Colors.LightGray + " is now in the lead!");
+					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.LightGray + "Auction currently stands at " + Colors.Green + this.auctionCurAmount + this.moneyName + Colors.LightGray + "!");
+				}
+			}
 		} else {
-			// Broadcast the message
-			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + this.auctionCurName + Colors.LightGray + " is now in the lead!");
-			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.LightGray + "Auction currently stands at " + Colors.Green + this.auctionCurAmount + this.moneyName + Colors.LightGray + "!");
+			player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + "You must bid over the auction amount!");
 		}
 	}
 
@@ -1217,11 +1279,12 @@ public class iConomy extends Plugin {
 		this.auctionAmount = 0;
 		this.auctionStarter = "";
 		this.auctionCurBid = 0;
+		this.auctionCurSecretBid = 0;
 		this.auctionCurAmount = 0;
 		this.auctionStartingBid = 0;
 		this.auctionCurBidCount = 0;
 		this.auctionMin = 0;
-		this.auctionMax = 0;
+		this.auctionReserve = 0;
 	}
 
 	public boolean wonAuction(String name) {
@@ -1890,7 +1953,7 @@ public class iConomy extends Plugin {
 								return true;
 							}
 
-							p.bidAuction(player, amount);
+							p.bidAuction(player, amount, 0);
 
 						} else {
 							return false;
@@ -1935,6 +1998,7 @@ public class iConomy extends Plugin {
 							player.sendMessage(Colors.Rose + "Cannot bid on your own auction!");
 						} else if (p.can(player, "bid")) {
 							int amount = Integer.parseInt(split[2]);
+							int secret = 0;
 
 							if(amount < 1) {
 								player.sendMessage(Colors.Rose + "You must bid at least 1 "+p.moneyName+"!");
@@ -1947,7 +2011,11 @@ public class iConomy extends Plugin {
 								return true;
 							}
 
-							p.bidAuction(player, amount);
+							if(split.length < 5) {
+								secret = Integer.parseInt(split[3]);
+							}
+
+							p.bidAuction(player, amount, secret);
 
 						} else {
 							return false;
