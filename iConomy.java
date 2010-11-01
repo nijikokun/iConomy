@@ -458,6 +458,7 @@ public class iConomy extends Plugin {
 		items.put("344", "egg");
 		items.put("345", "compass");
 		items.put("346", "fishing-rod");
+		items.put("347", "watch");
 		items.put("2256", "gold-record");
 		items.put("2257", "green-record");
 
@@ -1287,164 +1288,40 @@ public class iConomy extends Plugin {
 		this.auctioner.removeKey(name);
 	}
 
+	public boolean canDo(String can, Player player) {
+	    if (!can.equals("*")) {
+		    String[] groupies = can.split(",");
+		    for (String group : groupies){ if(player.isInGroup(group)){return true;}}
+		    return false;
+	    }
+	    return true;
+	}
 
 	public boolean can(Player player, String command) {
 		if (command.equals("pay")) {
-			if (!this.canPay.equals("*")) {
-				String[] groups = this.canPay.split(",");
-				for (String group : groups) {
-					if (player.isInGroup(group)) {
-						return true;
-					}
-				}
-
-				return false;
-			}
-
-			return true;
+			return this.canDo(this.canPay, player);
 		} else if (command.equals("debit")) {
-			if (!this.canDebit.equals("*")) {
-				String[] groups = this.canDebit.split(",");
-				for (String group : groups) {
-					if (player.isInGroup(group)) {
-						return true;
-					}
-				}
-
-				return false;
-			}
-
-			return true;
+			return this.canDo(this.canDebit, player);
 		} else if (command.equals("credit")) {
-			if (!this.canCredit.equals("*")) {
-				String[] groups = this.canCredit.split(",");
-				for (String group : groups) {
-					if (player.isInGroup(group)) {
-						return true;
-					}
-				}
-
-				return false;
-			}
-
-			return true;
+			return this.canDo(this.canCredit, player);
 		} else if (command.equals("reset")) {
-			if (!this.canReset.equals("*")) {
-				String[] groups = this.canReset.split(",");
-				for (String group : groups) {
-					if (player.isInGroup(group)) {
-						return true;
-					}
-				}
-
-				return false;
-			}
-
-			return true;
+			return this.canDo(this.canReset, player);
 		} else if (command.equals("rank")) {
-			if (!this.canRank.equals("*")) {
-				String[] groups = this.canRank.split(",");
-				for (String group : groups) {
-					if (player.isInGroup(group)) {
-						return true;
-					}
-				}
-
-				return false;
-			}
-
-			return true;
+			return this.canDo(this.canRank, player);
 		} else if (command.equals("view")) {
-			if (!this.canView.equals("*")) {
-				String[] groups = this.canView.split(",");
-				for (String group : groups) {
-					if (player.isInGroup(group)) {
-						return true;
-					}
-				}
-
-				return false;
-			}
-
-			return true;
+			return this.canDo(this.canView, player);
 		} else if (command.equals("top")) {
-			if (!this.canTop.equals("*")) {
-				String[] groups = this.canTop.split(",");
-				for (String group : groups) {
-					if (player.isInGroup(group)) {
-						return true;
-					}
-				}
-
-				return false;
-			}
-
-			return true;
+			return this.canDo(this.canTop, player);
 		} else if (command.equals("sell")) {
-			if (!this.canSell.equals("*")) {
-				String[] groups = this.canSell.split(",");
-				for (String group : groups) {
-					if (player.isInGroup(group)) {
-						return true;
-					}
-				}
-
-				return false;
-			}
-
-			return true;
+			return this.canDo(this.canSell, player);
 		} else if (command.equals("buy")) {
-			if (!this.canBuy.equals("*")) {
-				String[] groups = this.canBuy.split(",");
-				for (String group : groups) {
-					if (player.isInGroup(group)) {
-						return true;
-					}
-				}
-
-				return false;
-			}
-
-			return true;
+			return this.canDo(this.canBuy, player);
 		} else if (command.equals("bid")) {
-			if (!this.canBid.equals("*")) {
-				String[] groups = this.canBid.split(",");
-				for (String group : groups) {
-					if (player.isInGroup(group)) {
-						return true;
-					}
-				}
-
-				return false;
-			}
-
-			return true;
+			return this.canDo(this.canBid, player);
 		} else if (command.equals("auction")) {
-			if (!this.canAuction.equals("*")) {
-				String[] groups = this.canAuction.split(",");
-				for (String group : groups) {
-					if (player.isInGroup(group)) {
-						return true;
-					}
-				}
-
-				return false;
-			}
-
-			return true;
+			return this.canDo(this.canAuction, player);
 		} else if (command.equals("end")) {
-			if (!this.canEnd.equals("*")) {
-				String[] groups = this.canEnd.split(",");
-				for (String group : groups) {
-					if (player.isInGroup(group)) {
-						return true;
-					}
-				}
-
-				return false;
-			}
-
-			return true;
+			return this.canDo(this.canEnd, player);
 		}
 
 		return false;
@@ -2134,6 +2011,11 @@ public class iConomy extends Plugin {
 								itemID = etc.getDataSource().getItem(split[3]);
 							}
 
+							if(itemID < 0) {
+								player.sendMessage(Colors.Rose + "Invalid item!");
+								return true;
+							}
+
 							if (!Item.isValidItem(itemID)) {
 								if(p.items.getKey(split[3]) != null) {
 									itemID = Integer.parseInt(p.items.getKey(split[3]).toString());
@@ -2227,6 +2109,11 @@ public class iConomy extends Plugin {
 							itemID = etc.getDataSource().getItem(split[1]);
 						}
 
+						if(itemID < 0) {
+							player.sendMessage(Colors.Rose + "Invalid item!");
+							return true;
+						}
+
 						if (!Item.isValidItem(itemID)) {
 							if(p.items.getKey(split[1]) != null) {
 								itemID = Integer.parseInt(p.items.getKey(split[1]).toString());
@@ -2291,6 +2178,11 @@ public class iConomy extends Plugin {
 							itemID = etc.getDataSource().getItem(split[2]);
 						}
 
+						if(itemID < 0) {
+							player.sendMessage(Colors.Rose + "Invalid item!");
+							return true;
+						}
+
 						if (!Item.isValidItem(itemID)) {
 							if(p.items.getKey(split[2]) != null) {
 								itemID = Integer.parseInt(p.items.getKey(split[2]).toString());
@@ -2329,6 +2221,11 @@ public class iConomy extends Plugin {
 							itemID = etc.getDataSource().getItem(split[2]);
 						}
 
+						if(itemID < 0) {
+							player.sendMessage(Colors.Rose + "Invalid item!");
+							return true;
+						}
+
 						if (!Item.isValidItem(itemID)) {
 							if(p.items.getKey(split[2]) != null) {
 								itemID = Integer.parseInt(p.items.getKey(split[2]).toString());
@@ -2365,6 +2262,11 @@ public class iConomy extends Plugin {
 							itemID = Integer.parseInt(split[1]);
 						} catch (NumberFormatException n) {
 							itemID = etc.getDataSource().getItem(split[1]);
+						}
+
+						if(itemID < 0) {
+							player.sendMessage(Colors.Rose + "Invalid item!");
+							return true;
 						}
 
 						if (!Item.isValidItem(itemID) && amount == 0) {
@@ -2437,6 +2339,11 @@ public class iConomy extends Plugin {
 							itemID = etc.getDataSource().getItem(split[2]);
 						}
 
+						if(itemID < 0) {
+							player.sendMessage(Colors.Rose + "Invalid item!");
+							return true;
+						}
+
 						if (!Item.isValidItem(itemID)) {
 							if(p.items.getKey(split[2]) != null) {
 								itemID = Integer.parseInt(p.items.getKey(split[2]).toString());
@@ -2480,6 +2387,11 @@ public class iConomy extends Plugin {
 							itemID = Integer.parseInt(split[2]);
 						} catch (NumberFormatException n) {
 							itemID = etc.getDataSource().getItem(split[2]);
+						}
+
+						if(itemID < 0) {
+							player.sendMessage(Colors.Rose + "Invalid item!");
+							return true;
 						}
 
 						if (!Item.isValidItem(itemID)) {
