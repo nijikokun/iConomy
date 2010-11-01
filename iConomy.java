@@ -24,6 +24,7 @@ public class iConomy extends Plugin {
 	private iProperty selling;
 	private iProperty auctions;
 	private iProperty auctioner;
+	private iProperty prizes;
 
 	// Hashmaps for items
 	BidiMap items = new TreeBidiMap();
@@ -207,7 +208,7 @@ public class iConomy extends Plugin {
 		} else if (type.equals("auction")) {
 			player.sendMessage(Colors.Rose + "iConomy [Auction] v" + this.aversion + " - by Nijikokun");
 			player.sendMessage(Colors.Rose + "---------------");
-			player.sendMessage(Colors.Rose + "<i> = item, <a> = amount");
+			player.sendMessage(Colors.Rose + "<i> Item, <a> Amount, <s> Secret bid");
 			player.sendMessage(Colors.Rose + "---------------");
 			player.sendMessage(Colors.Rose + "/auction - Shows current auction details or auction running information.");
 
@@ -218,6 +219,7 @@ public class iConomy extends Plugin {
 
 			if(this.can(player, "bid"))
 				player.sendMessage(Colors.Rose + "/auction -b|bid <a> - bid on the current auction");
+				player.sendMessage(Colors.Rose + "/auction -b|bid <a> <s> - bid with a little passion");
 
 			player.sendMessage(Colors.Rose + "/shop -e|end - ends the current auction");
 			player.sendMessage(Colors.Rose + "/auction ?|help - help documentation");
@@ -1144,7 +1146,7 @@ public class iConomy extends Plugin {
 
 	public void bidAuction(Player player, int amount, int secret) {
 		Boolean outbid = true;
-		if(this.auctionAmount < amount) {
+		if(this.auctionCurAmount < amount) {
 			if(this.auctionCurBid != 0 && this.auctionCurAmount != this.auctionStartingBid) {
 				if(amount < this.auctionCurSecretBid) {
 					if(secret != 0 && secret > this.auctionCurSecretBid) {
@@ -1349,6 +1351,10 @@ public class iConomy extends Plugin {
 		player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.LightGray + "Auction Ended!");
 		player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + total + this.moneyName + Colors.LightGray + " has been credited to your account!");
 		this.auctioner.removeKey(name);
+	}
+
+	public void lottery(Player player) {
+
 	}
 
 	public boolean canDo(String can, Player player) {
@@ -2140,6 +2146,22 @@ public class iConomy extends Plugin {
 
 					return true;
 				}
+			}
+
+			/*
+			 *  iConomy [Shop] [Basic 1.0]
+			 *
+			 *  @author: Nijikokun
+			 *  @description: Creates a basic shop!
+			 *
+			 *  @commands:
+			 *	/lottery <i> - Displays amount per 1 item
+			 *	/lottery <i> <a> - Displays amount per <a> items
+			 *	/lottery -b|buy <i> <a> - Purchase the item
+			 *	/lottery -s|sell <i> <a> - Sell an item
+			 */
+			if (split[0].equalsIgnoreCase("/lottery") && p.globalShop) {
+
 			}
 
 			/*

@@ -1,7 +1,11 @@
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -41,6 +45,22 @@ public final class iProperty {
 		} catch (IOException ex) {
 			log.log(Level.SEVERE, "Unable to save " + this.fileName, ex);
 		}
+	}
+
+	public Map<String, String> returnMap() throws Exception {
+		Map<String, String> map = new HashMap();
+		BufferedReader reader = new BufferedReader(new FileReader(this.fileName));
+		String line;
+		while ((line = reader.readLine()) != null) {
+			if (line.trim().length()==0) continue;
+			if (line.charAt(0)=='#') continue;
+			int delimPosition = line.indexOf('=');
+			String key = line.substring(0, delimPosition-1).trim();
+			String value = line.substring(delimPosition+1).trim();
+			map.put(key, value);
+		}
+		reader.close();
+		return map;
 	}
 
 	public void removeKey(String key) {
