@@ -3,12 +3,16 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.apache.commons.collections.BidiMap;
 import org.apache.commons.collections.bidimap.*;
 import java.sql.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
 
 public class iConomy extends Plugin {
 	protected static final Logger log = Logger.getLogger("Minecraft");
@@ -26,6 +30,9 @@ public class iConomy extends Plugin {
 	private iProperty auctioner;
 	private iProperty prizes;
 
+	// Hashmaps for lottery
+	private Map<String, String> hashPrizes;
+
 	// Hashmaps for items
 	BidiMap items = new TreeBidiMap();
 
@@ -40,6 +47,7 @@ public class iConomy extends Plugin {
 	private int moneyGiveInterval = 0;
 	private int moneyTake = 0;
 	private int moneyTakeInterval = 0;
+	public int startingBalance;
 	private Timer mTime1;
 	private Timer mTime2;
 	public String moneyName;
@@ -57,11 +65,13 @@ public class iConomy extends Plugin {
 	public String canAuction;
 	public String canBid;
 	public String canEnd;
+	public String canLottery;
 
 	// Shop Details
 	public boolean auction;
 	public boolean globalShop;
 	public boolean physicalShop;
+	public boolean globalLottery;
 
 	// Auction settings
 	public Timer auctionTimer = new Timer();
@@ -79,6 +89,7 @@ public class iConomy extends Plugin {
 	public int auctionCurBid = 0;
 	public int auctionCurBidCount = 0;
 	public int auctionCurSecretBid = 0;
+	public boolean auctionReserveMet = false;
 
 	// Buying Template
 	public String buyInvalidAmount;
@@ -92,13 +103,22 @@ public class iConomy extends Plugin {
 	public String sellGiveAmount;
 	public String sellGive;
 	public String sellNone;
-	public Integer startingBalance;
-	public boolean auctionReserveMet;
+
+	// Lottery Template
+	public String lotteryNotEnough;
+	public String lotteryLoser;
+	public String lotteryNotAvailable;
+	public String lotteryWinner;
+	public String lotteryLimit;
+	public String lotteryTag = Colors.White + "["+Colors.Green+"Lottery"+Colors.White+"]";
 
 	// Logging
 	public boolean logPay;
 	public boolean logBuy;
 	public boolean logSell;
+
+	// Tickets
+	public int ticketCost;
 
 	// Database
 	private boolean mysql;
@@ -110,7 +130,8 @@ public class iConomy extends Plugin {
 	// Versioning
 	private String version = "0.9";
 	private String sversion = "0.4";
-	private String aversion = "0.2";
+	private String aversion = "0.3";
+	private String lversion = "0.1";
 
 	public iConomy() {
 		this.props = null;
@@ -219,10 +240,17 @@ public class iConomy extends Plugin {
 
 			if(this.can(player, "bid"))
 				player.sendMessage(Colors.Rose + "/auction -b|bid <a> - bid on the current auction");
-				player.sendMessage(Colors.Rose + "/auction -b|bid <a> <s> - bid with a little passion");
+				player.sendMessage(Colors.Rose + "/auction -b|bid <a> <s> - bid with a secret amount");
 
-			player.sendMessage(Colors.Rose + "/shop -e|end - ends the current auction");
+			player.sendMessage(Colors.Rose + "/auction -e|end - ends the current auction");
 			player.sendMessage(Colors.Rose + "/auction ?|help - help documentation");
+		} else if (type.equals("lottery")) {
+			player.sendMessage(Colors.Rose + "iConomy [Lottery] v" + this.lversion + " - by Nijikokun");
+			player.sendMessage(Colors.Rose + "---------------");
+			player.sendMessage(Colors.Rose + "<i> Item, <a> Amount, <s> Secret bid");
+			player.sendMessage(Colors.Rose + "---------------");
+			player.sendMessage(Colors.Rose + "/lottery - Try your luck at winning the lottery!");
+			player.sendMessage(Colors.Rose + "/lottery ?|help - help documentation");
 		}
 	}
 
@@ -247,9 +275,13 @@ public class iConomy extends Plugin {
 		this.mysql = this.props.getBoolean("use-mysql", false);
 		this.globalShop = this.props.getBoolean("use-shop", true);
 		this.auction = this.props.getBoolean("use-auction", true);
+		this.globalLottery = this.props.getBoolean("use-lottery", true);
 
 		// Money Starting Balance
 		this.startingBalance = this.props.getInt("starting-balance", 0);
+
+		// Lottery Ticket Cost
+		this.ticketCost = this.props.getInt("ticket-cost", 150);
 
 		// Ticker Amounts
 		this.moneyGive = this.props.getInt("money-give", 0);
@@ -275,6 +307,7 @@ public class iConomy extends Plugin {
 		this.canAuction = this.props.getString("can-auction", "*");
 		this.canBid = this.props.getString("can-bid", "*");
 		this.canEnd = this.props.getString("can-end", "admins,");
+		this.canLottery = this.props.getString("can-lottery", "*");
 
 		// Buying / Selling logging
 		this.logPay = this.props.getBoolean("log-pay", false);
@@ -292,11 +325,24 @@ public class iConomy extends Plugin {
 		this.buyInvalidAmount = this.props.getString("buy-invalid-amount", "Sorry, you must buy these in increments of %d!");
 		this.sellInvalidAmount = this.props.getString("sell-invalid-amount", "Sorry, you must sell these in increments of %d!");
 
+		// Lottery messages
+		this.lotteryNotEnough = this.props.getString("lottery-not-enough", "Sorry, you do not have enough to buy a ticket!");
+		this.lotteryWinner = this.props.getString("lottery-winner", "Congratulate %s for winning the lottery! Lucky Man!");
+		this.lotteryLoser = this.props.getString("lottery-loser", "The lady looks at you and shakes her head. Maybe next time.");
+		this.lotteryNotAvailable = this.props.getString("lottery-not-available", "Lottery seems to be unavailable this time. Try again!");
+
 		// Shop Data
 		this.buying = new iProperty(directory + "buying.properties");
 		this.selling = new iProperty(directory + "selling.properties");
 		this.auctions = new iProperty(directory + "auction.properties");
 		this.auctioner = new iProperty(directory + "auctioner.properties");
+		this.prizes = new iProperty(directory + "prizes.properties");
+
+		try {
+			this.hashPrizes = this.prizes.returnMap();
+		} catch (Exception ex) {
+			log.severe("[iConomy Lottery] Error: " + ex);
+		}
 		
 		// MySQL
 		this.driver = this.props.getString("driver", "com.mysql.jdbc.Driver");
@@ -537,7 +583,7 @@ public class iConomy extends Plugin {
 			}
 		} else if (type.equalsIgnoreCase("buy") && this.logBuy) {
 			try {
-				FileWriter fstream = new FileWriter("iConomy-iitems.log", true);
+				FileWriter fstream = new FileWriter(directory + lDirectory + "buy.log", true);
 				BufferedWriter out = new BufferedWriter(fstream);
 				out.write(date + "|" + data);
 				out.newLine();
@@ -547,7 +593,7 @@ public class iConomy extends Plugin {
 			}
 		} else if (type.equalsIgnoreCase("sell") && this.logSell) {
 			try {
-				FileWriter fstream = new FileWriter("iConomy-iitems.log", true);
+				FileWriter fstream = new FileWriter(directory + lDirectory + "sell.log", true);
 				BufferedWriter out = new BufferedWriter(fstream);
 				out.write(date + "|" + data);
 				out.newLine();
@@ -1353,8 +1399,83 @@ public class iConomy extends Plugin {
 		this.auctioner.removeKey(name);
 	}
 
-	public void lottery(Player player) {
+	public String lotteryPrize() {
+		if (this.mysql) {
+			Connection conn = null;
+			PreparedStatement ps = null;
+			ResultSet rs = null;
 
+			try {
+				conn = this.data.MySQL();
+				ps = conn.prepareStatement("SELECT * FROM `iPrizes` WHERE id = (SELECT FLOOR(MAX(id) * RAND()) FROM `iPrizes`) ORDER BY id LIMIT 1");
+				rs = ps.executeQuery();
+
+				if (rs.next()) {
+					// Settings
+					int percent = rs.getInt("percent");
+					int item = rs.getInt("item");
+					int amount = rs.getInt("max-amount");
+
+					return ""+percent+";"+item+";"+amount+";";
+				} else {
+					return "";
+				}
+			} catch (SQLException ex) {
+				log.severe("[iConomy Lottery] Unable to grab a prize!");
+			} finally {
+				try {
+					if (ps != null) { ps.close(); }
+					if (rs != null) { rs.close(); }
+					if (conn != null) { conn.close(); }
+				} catch (SQLException ex) { }
+			}
+
+			return "";
+		} else {
+			Random generator = new Random();
+			Object[] values = this.hashPrizes.values().toArray();
+
+			if(values.length < 1) {
+				return "";
+			}
+
+			String randomValue = (String) values[generator.nextInt(values.length)];
+			return randomValue;
+		}
+	}
+
+	public void lottery(Player player) {
+		if(this.data.getBalance(player.getName()) < this.ticketCost) {
+			player.sendMessage(this.lotteryTag + Colors.Rose + " You do not have enough to purchase a ticket!");
+			player.sendMessage(this.lotteryTag + Colors.Rose + " Ticket cost: "+ this.ticketCost); return;
+		} else {
+			String prize = this.lotteryPrize();
+			Random generator = new Random();
+
+			if(prize.equals("")) {
+				player.sendMessage(this.lotteryTag + Colors.Rose + " " + this.lotteryNotAvailable); return;
+			}
+
+			String[] data = prize.split(";");
+			int percent = Integer.parseInt(data[0]);
+			int item = Integer.parseInt(data[1]);
+			int amount = Integer.parseInt(data[1]);
+			int chance = generator.nextInt(100);
+			int amountGiven = (amount > 1) ? generator.nextInt(amount) : 1;
+
+			if(chance < percent) {
+				if(amountGiven != 0) {
+					player.giveItem(item, amountGiven);
+					this.broadcast(this.lotteryTag + Colors.Gold + " " + this.lotteryWinner);
+					// player.sendMessage(this.lotteryTag + Colors.Gold + " Enjoy your items :)!");
+				} else {
+					player.sendMessage(this.lotteryTag + Colors.LightGray + " " + this.lotteryLoser);
+					// this.broadcast(this.lotteryTag + Colors.LightGray + " " + this.lotteryLoser);
+				}
+			} else {
+				player.sendMessage(this.lotteryTag + Colors.LightGray + " " + this.lotteryLoser);
+			}
+		}
 	}
 
 	public boolean canDo(String can, Player player) {
@@ -1391,6 +1512,8 @@ public class iConomy extends Plugin {
 			return this.canDo(this.canAuction, player);
 		} else if (command.equals("end")) {
 			return this.canDo(this.canEnd, player);
+		} else if (command.equals("lottery")) {
+			return this.canDo(this.canLottery, player);
 		}
 
 		return false;
@@ -2011,7 +2134,7 @@ public class iConomy extends Plugin {
 								return true;
 							}
 
-							if(amount+p.auctionCurAmount > p.getBalance(player)) {
+							if(p.auctionCurAmount > p.getBalance(player)) {
 								player.sendMessage(Colors.Rose + "You cannot bid more than you have!");
 								p.showBalance(player.getName(), player, true);
 								return true;
@@ -2161,7 +2284,21 @@ public class iConomy extends Plugin {
 			 *	/lottery -s|sell <i> <a> - Sell an item
 			 */
 			if (split[0].equalsIgnoreCase("/lottery") && p.globalShop) {
+				if ((split.length < 2)) {
+					if (!p.can(player, "lottery")) {
+						return false;
+					}
 
+					// Do the lottery!
+					p.lottery(player); return true;
+				}
+				// Level 2
+				if ((split.length < 3)) {
+					if (split[1].equalsIgnoreCase("?") || split[1].equalsIgnoreCase("help")) {
+						p.halp(player, "lottery");
+						return true;
+					}
+				}
 			}
 
 			/*
