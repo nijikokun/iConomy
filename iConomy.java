@@ -3,14 +3,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.apache.commons.collections.BidiMap;
 import org.apache.commons.collections.bidimap.*;
 import java.sql.*;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
@@ -111,6 +109,7 @@ public class iConomy extends Plugin {
 	public String lotteryWinner;
 	public String lotteryLimit;
 	public String lotteryTag = Colors.White + "["+Colors.Green+"Lottery"+Colors.White+"]";
+	public String lotteryCost;
 
 	// Logging
 	public boolean logPay;
@@ -327,9 +326,11 @@ public class iConomy extends Plugin {
 
 		// Lottery messages
 		this.lotteryNotEnough = this.props.getString("lottery-not-enough", "Sorry, you do not have enough to buy a ticket!");
-		this.lotteryWinner = this.props.getString("lottery-winner", "Congratulate %s for winning the lottery! Lucky Man!");
-		this.lotteryLoser = this.props.getString("lottery-loser", "The lady looks at you and shakes her head. Maybe next time.");
+		this.lotteryWinner = this.props.getString("lottery-winner", "Congratulations %s won %d %s in the lottery!");
+		this.lotteryLoser = this.props.getString("lottery-loser", "The lady looks at you and shakes her head. Try Again!.");
 		this.lotteryNotAvailable = this.props.getString("lottery-not-available", "Lottery seems to be unavailable this time. Try again!");
+		this.lotteryCost = this.props.getString("lottery-cost", "The lady snatches %s from your hand and gives you a ticket.");
+
 
 		// Shop Data
 		this.buying = new iProperty(directory + "buying.properties");
@@ -522,6 +523,9 @@ public class iConomy extends Plugin {
 		items.put("345", "compass");
 		items.put("346", "fishing-rod");
 		items.put("347", "watch");
+		items.put("348", "brittle-gold-dust");
+		items.put("349", "raw-fish");
+		items.put("350", "cooked-fish");
 		items.put("2256", "gold-record");
 		items.put("2257", "green-record");
 
@@ -1452,6 +1456,11 @@ public class iConomy extends Plugin {
 			String prize = this.lotteryPrize();
 			Random generator = new Random();
 
+			// Do lottery Ticket
+			this.debit(null, player.getName(), this.ticketCost, false);
+			player.sendMessage(this.lotteryTag + Colors.LightGray + " " + String.format(this.lotteryCost, this.ticketCost + this.moneyName));
+
+			// Do lottery checks
 			if(prize.equals("")) {
 				player.sendMessage(this.lotteryTag + Colors.Rose + " " + this.lotteryNotAvailable); return;
 			}
@@ -1462,11 +1471,13 @@ public class iConomy extends Plugin {
 			int amount = Integer.parseInt(data[1]);
 			int chance = generator.nextInt(100);
 			int amountGiven = (amount > 1) ? generator.nextInt(amount) : 1;
+			String itemName = (String) this.items.get(cInt(item));
+			itemName.replace("-", " ");
 
 			if(chance < percent) {
 				if(amountGiven != 0) {
 					player.giveItem(item, amountGiven);
-					this.broadcast(this.lotteryTag + Colors.Gold + " " + this.lotteryWinner);
+					this.broadcast(this.lotteryTag + Colors.Gold + " " + String.format(this.lotteryWinner, player.getName(), amount, itemName));
 					// player.sendMessage(this.lotteryTag + Colors.Gold + " Enjoy your items :)!");
 				} else {
 					player.sendMessage(this.lotteryTag + Colors.LightGray + " " + this.lotteryLoser);
