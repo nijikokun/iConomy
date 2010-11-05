@@ -16,6 +16,8 @@ public class iConomy extends Plugin {
 	protected static final Logger log = Logger.getLogger("Minecraft");
 	private Listener l = new Listener(this);
 
+	static boolean debugging = true;
+
 	// Directory
 	private String directory = "iConomy/";
 	private String lDirectory = "logs/";
@@ -66,7 +68,7 @@ public class iConomy extends Plugin {
 	public String canLottery;
 
 	// Shop Details
-	public boolean auction;
+	public boolean globalAuction;
 	public boolean globalShop;
 	public boolean physicalShop;
 	public boolean globalLottery;
@@ -127,10 +129,10 @@ public class iConomy extends Plugin {
 	private String db;
 
 	// Versioning
-	private String version = "0.9";
-	private String sversion = "0.4";
-	private String aversion = "0.3";
-	private String lversion = "0.1";
+	private String version = "0.9.3.5";
+	private String sversion = "0.5";
+	private String aversion = "0.4";
+	private String lversion = "0.2";
 
 	public iConomy() {
 		this.props = null;
@@ -143,12 +145,24 @@ public class iConomy extends Plugin {
 	public void enable() {
 		if (load()) {
 			log.info("[iConomy v" + this.version + "] Plugin Enabled.");
+
+			if(debugging)
+				log.info("[iConomy Debugging] Enabled.");
+
 		} else {
 			log.info("[iConomy v" + this.version + "] Plugin failed to load.");
 		}
 
-		etc.getInstance().addCommand("/money", "help|? - For more information");
-		etc.getInstance().addCommand("/shop", "help|? - For more information");
+		etc.getInstance().addCommand("/money", "? - For more information");
+
+		if(this.globalShop)
+			etc.getInstance().addCommand("/shop", "? - For more information");
+
+		if(this.globalAuction)
+			etc.getInstance().addCommand("/auction", "? - For more information");
+
+		if(this.globalLottery)
+			etc.getInstance().addCommand("/lottery", "- Test your luck on the lottery!");
 	}
 
 	public void initialize() {
@@ -159,12 +173,22 @@ public class iConomy extends Plugin {
 
 	public void disable() {
 		etc.getInstance().removeCommand("/money");
-		if (this.mTime1 != null) {
+
+		if(this.globalShop)
+			etc.getInstance().removeCommand("/shop");
+
+		if(this.globalAuction)
+			etc.getInstance().removeCommand("/auction");
+
+		if(this.globalLottery)
+			etc.getInstance().removeCommand("/lottery");
+
+		if (this.mTime1 != null)
 			this.mTime1.cancel();
-		}
-		if (this.mTime2 != null) {
+
+		if (this.mTime2 != null) 
 			this.mTime2.cancel();
-		}
+
 		log.info("[iConomy v" + this.version + "] Plugin Disabled.");
 	}
 
@@ -181,28 +205,28 @@ public class iConomy extends Plugin {
 			}
 
 			if (this.can(player, "pay")) {
-				player.sendMessage(Colors.Rose + "/money -p|pay <p> <a> - Pay a player money");
+				player.sendMessage(Colors.Rose + "/money pay <p> <a> - Pay a player money");
 			}
 
 			if (this.can(player, "credit")) {
-				player.sendMessage(Colors.Rose + "/money -c|credit <a> <p> - Give a player money");
+				player.sendMessage(Colors.Rose + "/money credit <a> <p> - Give a player money");
 			}
 
 			if (this.can(player, "debit")) {
-				player.sendMessage(Colors.Rose + "/money -d|debit <p> <a> - Take a players money");
+				player.sendMessage(Colors.Rose + "/money debit <p> <a> - Take a players money");
 			}
 
 			if (this.can(player, "rank")) {
-				player.sendMessage(Colors.Rose + "/money -r|rank <p> - Show your rank or another players");
+				player.sendMessage(Colors.Rose + "/money rank <p> - Show your rank or another players");
 			}
 
 			if (this.can(player, "reset")) {
-				player.sendMessage(Colors.Rose + "/money -x|reset <p> - Reset a players account balance.");
+				player.sendMessage(Colors.Rose + "/money reset <p> - Reset a players account balance.");
 			}
 
 			if (this.can(player, "top")) {
-				player.sendMessage(Colors.Rose + "/money -t|top - Shows top 5");
-				player.sendMessage(Colors.Rose + "/money -t|top <a> - Shows top <a> richest players");
+				player.sendMessage(Colors.Rose + "/money top - Shows top 5");
+				player.sendMessage(Colors.Rose + "/money top <a> - Shows top <a> richest players");
 			}
 
 			player.sendMessage(Colors.Rose + "/money help|? - Displays this.");
@@ -215,13 +239,13 @@ public class iConomy extends Plugin {
 			player.sendMessage(Colors.Rose + "/shop <i> <a> - Shows amount per <a> for sell/buy");
 
 			if (this.can(player, "buy")) {
-				player.sendMessage(Colors.Rose + "/shop -b|buy <i> - Purchase 1 item");
-				player.sendMessage(Colors.Rose + "/shop -b|buy <i> <a> - Purchase multiple items");
+				player.sendMessage(Colors.Rose + "/shop buy <i> - Purchase 1 item");
+				player.sendMessage(Colors.Rose + "/shop buy <i> <a> - Purchase multiple items");
 			}
 
 			if (this.can(player, "sell")) {
-				player.sendMessage(Colors.Rose + "/shop -s|sell <i> - Sell 1 item");
-				player.sendMessage(Colors.Rose + "/shop -s|sell <i> <a> - Sell multiple items");
+				player.sendMessage(Colors.Rose + "/shop sell <i> - Sell 1 item");
+				player.sendMessage(Colors.Rose + "/shop sell <i> <a> - Sell multiple items");
 			}
 
 			player.sendMessage(Colors.Rose + "/shop help|? - Displays this.");
@@ -233,23 +257,21 @@ public class iConomy extends Plugin {
 			player.sendMessage(Colors.Rose + "/auction - Shows current auction details or auction running information.");
 
 			if(this.can(player, "auction"))
-				player.sendMessage(Colors.Rose + "/auction -s|start <time-seconds> <item> <amount> <start-bid>");
+				player.sendMessage(Colors.Rose + "/auction start <time-seconds> <item> <amount> <start-bid>");
 				player.sendMessage(Colors.Rose + "    Optional after <start-bid>: [min-bid] [max-bid]");
 				player.sendMessage(Colors.Rose + "    Desc: Starts the auction with name for concurrent bids");
 
 			if(this.can(player, "bid"))
-				player.sendMessage(Colors.Rose + "/auction -b|bid <a> - bid on the current auction");
-				player.sendMessage(Colors.Rose + "/auction -b|bid <a> <s> - bid with a secret amount");
+				player.sendMessage(Colors.Rose + "/auction bid <a> - bid on the current auction");
+				player.sendMessage(Colors.Rose + "/auction bid <a> <s> - bid with a secret amount");
 
-			player.sendMessage(Colors.Rose + "/auction -e|end - ends the current auction");
-			player.sendMessage(Colors.Rose + "/auction ?|help - help documentation");
+			player.sendMessage(Colors.Rose + "/auction end - ends the current auction");
+			player.sendMessage(Colors.Rose + "/auction ? - help documentation");
 		} else if (type.equals("lottery")) {
 			player.sendMessage(Colors.Rose + "iConomy [Lottery] v" + this.lversion + " - by Nijikokun");
 			player.sendMessage(Colors.Rose + "---------------");
-			player.sendMessage(Colors.Rose + "<i> Item, <a> Amount, <s> Secret bid");
-			player.sendMessage(Colors.Rose + "---------------");
 			player.sendMessage(Colors.Rose + "/lottery - Try your luck at winning the lottery!");
-			player.sendMessage(Colors.Rose + "/lottery ?|help - help documentation");
+			player.sendMessage(Colors.Rose + "/lottery ? - help documentation");
 		}
 	}
 
@@ -273,8 +295,11 @@ public class iConomy extends Plugin {
 		// Switches
 		this.mysql = this.props.getBoolean("use-mysql", false);
 		this.globalShop = this.props.getBoolean("use-shop", true);
-		this.auction = this.props.getBoolean("use-auction", true);
+		this.globalAuction = this.props.getBoolean("use-auction", true);
 		this.globalLottery = this.props.getBoolean("use-lottery", true);
+
+		// Debugging
+		debugging = this.props.getBoolean("debugging", false);
 
 		// Money Starting Balance
 		this.startingBalance = this.props.getInt("starting-balance", 0);
@@ -790,12 +815,19 @@ public class iConomy extends Plugin {
 			player.sendMessage(Colors.Rose + this.buyNotEnough);
 			log.info("[iConomy Shop] " + "Player " + player.getName() + " attempted to buy more [" + itemId + "] [" + amount + "] than they have in "+this.moneyName+" [" + itemAmount + "].");
 			this.shopLog("buy", player.getName() + "|0|203|" + itemId + "|" + amount + "|" + itemAmount + this.moneyName);
+
+			if(debugging)
+				log.info("[iConomy Debugging] [" + player.getName() + "] ["+itemId+"] ["+amount+"] ["+itemAmount+"] [#20335]");
 		}
 
 		if (!this.itemCan("buy", cInt(itemId), amount)) {
 			player.sendMessage(Colors.Rose + String.format(this.buyInvalidAmount, needsAmount));
 			log.info("[iConomy Shop] " + "Player " + player.getName() + " attempted to buy bundle [" + itemId + "] with the offset amount [" + amount + "].");
 			this.shopLog("buy", player.getName() + "|0|202|" + itemId + "|" + amount);
+
+			if(debugging)
+				log.info("[iConomy Debugging] [" + player.getName() + "] ["+itemId+"] ["+needsAmount+"] ["+amount+"] [#20336]");
+
 			return true;
 		}
 
@@ -826,6 +858,10 @@ public class iConomy extends Plugin {
 			player.sendMessage(Colors.Rose + this.buyReject);
 			log.info("[iConomy Shop] " + "Player " + player.getName() + " requested to buy an unavailable item: [" + itemId + "].");
 			this.shopLog("buy", player.getName() + "|0|201|" + itemId);
+
+			if(debugging)
+				log.info("[iConomy Debugging] [" + player.getName() + "] ["+itemId+"] [#20337]");
+
 			return true;
 		}
 
@@ -839,14 +875,11 @@ public class iConomy extends Plugin {
 		if (!this.itemCan("sell", cInt(itemId), amount)) {
 			player.sendMessage(Colors.Rose + String.format(this.sellInvalidAmount, needsAmount));
 			log.info("[iConomy Shop] " + "Player " + player.getName() + " attempted to sell [" + amount + "] bundles of [" + itemId + "].");
-			this.shopLog("sell", player.getName() + "|0|203|" + itemId + "|" + amount);
-			return true;
-		}
+			this.shopLog("sell", player.getName() + "|0|204|" + itemId + "|" + amount);
 
-		if(!bag.hasItem(itemId, needsAmount*amount, 6400)){
-			player.sendMessage(Colors.Rose + String.format(this.sellInvalidAmount, needsAmount));
-			log.info("[iConomy Shop] " + "Player " + player.getName() + " attempted to sell [" + amount + "] bundles of [" + itemId + "].");
-			this.shopLog("sell", player.getName() + "|0|203|" + itemId + "|" + amount);
+			if(debugging)
+				log.info("[iConomy Debugging] [" + player.getName() + "] ["+amount+"] ["+needsAmount*amount+"] ["+itemId+"] [#20338]");
+
 			return true;
 		}
 
@@ -870,6 +903,10 @@ public class iConomy extends Plugin {
 				player.sendMessage(Colors.Rose + this.sellNone);
 				log.info("[iConomy Shop] " + "Player " + player.getName() + " attempted to sell itemId [" + itemId + "] but had none.");
 				this.shopLog("sell", player.getName() + "|0|202|" + itemId);
+
+				if(debugging)
+					log.info("[iConomy Debugging] [" + player.getName() + "] ["+itemId+"] [#20339]");
+
 				return true;
 			} else {
 				bag.updateInventory();
@@ -897,6 +934,10 @@ public class iConomy extends Plugin {
 			player.sendMessage(Colors.Rose + this.sellReject);
 			log.info("[iConomy Shop] " + "Player " + player.getName() + " requested to sell an unsellable item: [" + itemId + "].");
 			this.shopLog("sell", player.getName() + "|0|201|" + itemId);
+
+				if(debugging)
+					log.info("[iConomy Debugging] [" + player.getName() + "] ["+itemId+"] [#20340]");
+
 			return true;
 		}
 	}
@@ -924,6 +965,9 @@ public class iConomy extends Plugin {
 			}
 
 		}
+
+		if(debugging)
+			log.info("[iConomy Debugging] [" + player1 + "] [" + player2 + "] ["+amount+"] [" + really + "] [#20341]");
 
 		if(player2 != null) {
 			updateState(player2, true);
@@ -959,6 +1003,9 @@ public class iConomy extends Plugin {
 
 		}
 
+		if(debugging)
+			log.info("[iConomy Debugging] [" + player1 + "] [" + player2 + "] ["+amount+"] [" + really + "] [#20342]");
+
 		if(player2 != null) {
 			updateState(player2, true);
 		}
@@ -982,6 +1029,9 @@ public class iConomy extends Plugin {
 		local.sendMessage(Colors.Rose + pdata + "'s account has been reset.");
 		log.info("[iConomy Money] " + pdata + "'s account has been reset by " + local.getName());
 
+		if(debugging)
+			log.info("[iConomy Debugging] [" + player + "] [" + local + "] [" + notify + "] [#20343]");
+
 		// Update
 		if (player != null) {
 			updateState(player, true);
@@ -1002,8 +1052,14 @@ public class iConomy extends Plugin {
 
 		if (pdata1.equals(pdata2)) {
 			player1.sendMessage(Colors.Rose + "You cannot send yourself money");
+
+			if(debugging)
+				log.info("[iConomy Debugging] [" + pdata1 + "] [" + pdata2 + "] [" + amount + "] [#20344]");
 		} else if (amount > i) {
 			player1.sendMessage(Colors.Rose + "You do not have enough money.");
+
+			if(debugging)
+				log.info("[iConomy Debugging] [" + pdata1 + "] [" + pdata2 + "] [" + amount + "] [#20345]");
 		} else {
 			// Update player one balance
 			i -= amount;
@@ -1019,6 +1075,9 @@ public class iConomy extends Plugin {
 			
 			// Log
 			this.shopLog("pay", pdata1 + "|"+pdata2+"|1|200|" + amount);
+
+			if(debugging)
+				log.info("[iConomy Debugging] [" + pdata1 + "] [" + pdata2 + "] [" + amount + "] [#20346]");
 
 			// Show each balance
 			showBalance(pdata1, null, true);
@@ -1109,6 +1168,10 @@ public class iConomy extends Plugin {
 		int i = this.data.getBalance(name);
 		int j = 0;
 
+
+		if(debugging)
+			log.info("[iConomy Debugging] [" + name + "] [#20347]");
+
 		for (String player : this.rankedList) {
 			if (i > this.data.getBalance(player)) {
 				break;
@@ -1137,6 +1200,10 @@ public class iConomy extends Plugin {
 			} else {
 				this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Yellow + "Auctioner has attempted to cheat!");
 				this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Yellow + "Specified items are not in his inventory!");
+
+				if(debugging)
+					log.info("[iConomy Debugging] [" + player + "] [" + inter + "] [" + itemId + "] [" + startingBid + "] [" + minBid + "] [" + maxBid + "] [#20348]");
+
 				return false;
 			}
 		}
@@ -1145,6 +1212,10 @@ public class iConomy extends Plugin {
 		if (sold == 0) {
 			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Yellow + "Auctioner has attempted to cheat!");
 			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Yellow + "Specified items are not in his inventory!");
+
+			if(debugging)
+				log.info("[iConomy Debugging] [" + player + "] [" + inter + "] [" + itemId + "] [" + startingBid + "] [" + minBid + "] [" + maxBid + "] [#20349]");
+
 			return false;
 		} else {
 			bag.updateInventory();
@@ -1225,6 +1296,10 @@ public class iConomy extends Plugin {
 
 						this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] has been raised to " + Colors.Green + this.auctionCurAmount + this.moneyName + Colors.LightGray + "!");
 						player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + "You have been outbid by "+ Colors.Green + this.auctionCurName + Colors.LightGray + " secret bid!");
+
+						if(debugging)
+							log.info("[iConomy Debugging] [" + player + "] [" + amount + "] [" + secret + "] ["+this.auctionCurAmount+"] ["+this.auctionCurBidCount+"] ["+this.auctionCurBid+"] ["+this.auctionCurSecretBid+"] [#20350]");
+
 					} else {
 						Player previous = this.getPlayer(this.auctionCurName);
 
@@ -1247,11 +1322,19 @@ public class iConomy extends Plugin {
 				this.auctionCurAmount = amount;
 				this.auctionCurName = player.getName();
 				this.auctionCurBidCount += 1;
+
+				if(debugging)
+					log.info("[iConomy Debugging] [" + player + "] [" + amount + "] [" + secret + "] ["+this.auctionCurAmount+"] ["+this.auctionCurBidCount+"] ["+this.auctionCurBid+"] ["+this.auctionCurSecretBid+"] [#20351]");
+
 			}
 
 			if(this.auctionCurAmount >= this.auctionReserve && this.auctionReserve != 0 && !this.auctionReserveMet) {
 				this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + this.auctionCurName + Colors.LightGray + " reserve has been met!");
 				this.auctionReserveMet = true;
+
+				if(debugging)
+					log.info("[iConomy Debugging] [" + player + "] [" + amount + "] [" + secret + "] ["+this.auctionCurAmount+"] ["+this.auctionReserve+"] ["+this.auctionReserveMet+"] [#20352]");
+
 			} else {
 				if(outbid) {
 					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + this.auctionCurName + Colors.LightGray + " is now in the lead!");
@@ -1260,6 +1343,10 @@ public class iConomy extends Plugin {
 			}
 		} else {
 			player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + "You must bid over the auction amount!");
+
+			if(debugging)
+				log.info("[iConomy Debugging] [" + player + "] [" + amount + "] [" + secret + "] ["+this.auctionCurAmount+"] ["+this.auctionCurBidCount+"] ["+this.auctionCurBid+"] ["+this.auctionCurSecretBid+"] [#20351]");
+
 		}
 	}
 
@@ -1273,6 +1360,9 @@ public class iConomy extends Plugin {
 
 				Player player = this.getPlayer(this.auctionCurName);
 				Player auctioner = this.getPlayer(this.auctionStarter);
+
+				if(debugging)
+					log.info("[iConomy Debugging] [" + player + "] ["+auctioner+"] ["+this.auctionItem+"] ["+this.auctionAmount+"] ["+this.auctionCurAmount+"] ["+this.auctionCurBidCount+"] ["+this.auctionCurBid+"] ["+this.auctionCurSecretBid+"] [#20352]");
 
 				if(player == null && auctioner == null) {
 					this.auctions.setString(this.auctionCurName, this.auctionItem + "," + this.auctionAmount + "," + this.auctionCurAmount);
@@ -1314,6 +1404,9 @@ public class iConomy extends Plugin {
 					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + "Item(s) have been returned to you!");
 				}
 
+				if(debugging)
+					log.info("[iConomy Debugging] [" + player + "] ["+this.auctionCurName+"] ["+this.auctionItem+"] ["+this.auctionAmount+"] ["+this.auctionCurAmount+"] ["+this.auctionCurBidCount+"] ["+this.auctionCurBid+"] ["+this.auctionCurSecretBid+"] [#20353]");
+
 				this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Has ended. No winner as the minimum bid was not met.");
 			}
 		} else {
@@ -1324,6 +1417,10 @@ public class iConomy extends Plugin {
 				player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + "Item(s) have been returned to you!");
 			}
 			
+
+			if(debugging)
+				log.info("[iConomy Debugging] [" + player + "] ["+this.auctionCurName+"] ["+this.auctionItem+"] ["+this.auctionAmount+"] ["+this.auctionCurAmount+"] ["+this.auctionCurBidCount+"] ["+this.auctionCurBid+"] ["+this.auctionCurSecretBid+"] [#20354]");
+
 			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Has ended with no bids.");
 		}
 
@@ -1383,23 +1480,35 @@ public class iConomy extends Plugin {
 		player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + cost + this.moneyName + Colors.LightGray + " has been debited from your account!");
 		player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + "Enjoy your item(s)!");
 		player.giveItem(itemId, itemAmount);
+
+		if(debugging)
+			log.info("[iConomy Debugging] [" + player + "] ["+itemId+"] ["+itemAmount+"] ["+cost+"] [#20355]");
+
 		this.auctions.removeKey(name);
 	}
 
 	public void auctionerItems(Player player) {
 		String name = player.getName();
 		if(auctionFailed(name)){
-			String[] pauction = parseAuction(name);
-			player.giveItem(this.auctionItem, this.auctionAmount);
+			String[] pauction = parseAuctioner(name);
+			player.giveItem(Integer.parseInt(pauction[0]), Integer.parseInt(pauction[1]));
 			player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + "Item(s) have been returned to you!");
 			player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Had ended with no bids or your min/max was not met.");
 			this.auctioner.removeKey(name);
+
+			if(debugging)
+				log.info("[iConomy Debugging] [" + player + "] ["+pauction[0]+"] ["+pauction[1]+"] [#20356]");
+
 			return;
 		}
 		int total = auctionTotal(name);
 		this.deposit(null, name, total, false);
 		player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.LightGray + "Auction Ended!");
 		player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + total + this.moneyName + Colors.LightGray + " has been credited to your account!");
+
+		if(debugging)
+			log.info("[iConomy Debugging] [" + player + "] ["+total+"] [#20357]");
+
 		this.auctioner.removeKey(name);
 	}
 
@@ -1451,7 +1560,12 @@ public class iConomy extends Plugin {
 	public void lottery(Player player) {
 		if(this.data.getBalance(player.getName()) < this.ticketCost) {
 			player.sendMessage(this.lotteryTag + Colors.Rose + " You do not have enough to purchase a ticket!");
-			player.sendMessage(this.lotteryTag + Colors.Rose + " Ticket cost: "+ this.ticketCost); return;
+			player.sendMessage(this.lotteryTag + Colors.Rose + " Ticket cost: "+ this.ticketCost);
+
+			if(debugging)
+				log.info("[iConomy Debugging] [" + player + "] ["+this.data.getBalance(player.getName())+"] [#20358]");
+
+			 return;
 		} else {
 			String prize = this.lotteryPrize();
 			Random generator = new Random();
@@ -1486,6 +1600,10 @@ public class iConomy extends Plugin {
 			} else {
 				player.sendMessage(this.lotteryTag + Colors.LightGray + " " + this.lotteryLoser);
 			}
+
+			if(debugging)
+				log.info("[iConomy Debugging] [" + player + "] ["+this.data.getBalance(player.getName())+"] ["+amount+"] ["+amountGiven+"] ["+item+"] ["+percent+"] ["+chance+"] ["+itemName+"] [#20359]");
+
 		}
 	}
 
@@ -1552,6 +1670,10 @@ public class iConomy extends Plugin {
 
 		public boolean onCommand(Player player, String[] split) {
 			if (!player.canUseCommand(split[0])) {
+
+				if(debugging)
+					log.info("[iConomy Debugging] ["+split[0]+"] [cannot use command] [#20360]");
+
 				return false;
 			}
 
@@ -2005,7 +2127,7 @@ public class iConomy extends Plugin {
 			 *	/auction ?|help - help documentation
 			 *	/auction - Lists currenct auction details
 			 */
-			if (split[0].equalsIgnoreCase("/auction") && p.auction) {
+			if (split[0].equalsIgnoreCase("/auction") && p.globalAuction) {
 				if ((split.length < 2)) {
 					if(p.auctionTimerRunning) {
 						String itemName = (String) p.items.get(cInt(p.auctionItem));
@@ -2036,7 +2158,8 @@ public class iConomy extends Plugin {
 						if(player.getName().equals(p.auctionStarter)) {
 							player.sendMessage(Colors.Rose + "Cannot bid on your own auction!");
 						} else if (p.can(player, "bid")) {
-							player.sendMessage(Colors.Rose + "Usage: /auction -b|bid <amount>");
+							player.sendMessage(Colors.Rose + "Usage: /auction bid <amount>");
+							player.sendMessage(Colors.Rose + "Alt-Commands: -b");
 						} else {
 							return false;
 						}
@@ -2060,6 +2183,7 @@ public class iConomy extends Plugin {
 					} else if (split[1].equalsIgnoreCase("-s") || split[1].equalsIgnoreCase("start")) {
 						player.sendMessage(Colors.Rose + "Usage: /auction start <time-seconds> <item> <amount> <start-bid>");
 						player.sendMessage(Colors.Rose + "    Optional after start-bid: min-bid, max-bid");
+						player.sendMessage(Colors.Rose + "Alt-Commands: -s");
 						return true;
 					}
 
@@ -2265,7 +2389,8 @@ public class iConomy extends Plugin {
 							}
 						}
 
-						log.info(player+"-"+interval+"-"+itemID+"-"+amount+"-"+start+"-"+min+"-"+max+"");
+						if(debugging)
+							log.info("[iConomy Debugging] ["+player+"] ["+interval+"] ["+itemID+"] ["+amount+"] ["+start+"] ["+min+"] ["+max+"] [#20361]");
 
 						if(p.startAuction(player, interval, itemID, amount, start, min, max)) {
 							player.sendMessage(Colors.Yellow + "Auction has begun.");
@@ -2294,7 +2419,7 @@ public class iConomy extends Plugin {
 			 *	/lottery -b|buy <i> <a> - Purchase the item
 			 *	/lottery -s|sell <i> <a> - Sell an item
 			 */
-			if (split[0].equalsIgnoreCase("/lottery") && p.globalShop) {
+			if (split[0].equalsIgnoreCase("/lottery") && p.globalLottery) {
 				if ((split.length < 2)) {
 					if (!p.can(player, "lottery")) {
 						return false;
