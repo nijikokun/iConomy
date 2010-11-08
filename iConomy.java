@@ -1,4 +1,6 @@
 import java.io.*;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Timer;
@@ -129,10 +131,10 @@ public class iConomy extends Plugin {
 	private String db;
 
 	// Versioning
-	private String version = "0.9.3.5";
+	private String version = "0.9.3.6";
 	private String sversion = "0.5";
-	private String aversion = "0.4";
-	private String lversion = "0.2";
+	private String aversion = "0.5";
+	private String lversion = "0.3";
 
 	public iConomy() {
 		this.props = null;
@@ -149,6 +151,12 @@ public class iConomy extends Plugin {
 			if(debugging)
 				log.info("[iConomy Debugging] Enabled.");
 
+			String latest = getVersion();
+			if(latest != null) {
+				if(!latest.equals(version)) {
+					log.info("[iConomy Update] A new version of iConomy has been released! v"+latest+"!");
+				}
+			}
 		} else {
 			log.info("[iConomy v" + this.version + "] Plugin failed to load.");
 		}
@@ -188,6 +196,9 @@ public class iConomy extends Plugin {
 
 		if (this.mTime2 != null) 
 			this.mTime2.cancel();
+
+		if (this.auctionTimer != null)
+			this.auctionTimer.cancel();
 
 		log.info("[iConomy v" + this.version + "] Plugin Disabled.");
 	}
@@ -592,6 +603,33 @@ public class iConomy extends Plugin {
 		return true;
 	}
 
+	private static String getVersion()
+	{
+		String content = null;
+
+		// many of these calls can throw exceptions, so i've just
+		// wrapped them all in one try/catch statement.
+		try
+		{
+			URL url = new URL("http://mc.nexua.org/plugins/iConomy/?latest");
+			URLConnection urlConnection = url.openConnection();
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+
+			String line;
+
+			// read from the urlconnection via the bufferedreader
+			while ((line = bufferedReader.readLine()) != null){
+				content = line;
+			}
+			bufferedReader.close();
+		} catch(Exception e) {
+			log.severe("[iConomy Version Check] " + e);
+		}
+
+		return content;
+	}
+
+
 	public static String logDate() {
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		Date now = new Date();
@@ -608,7 +646,7 @@ public class iConomy extends Plugin {
 				out.newLine();
 				out.close();
 			} catch (Exception es) {
-				log.severe("[iCurrency Pay Logging] " + es.getMessage());
+				log.severe("[iConomy Pay Logging] " + es.getMessage());
 			}
 		} else if (type.equalsIgnoreCase("buy") && this.logBuy) {
 			try {
@@ -618,7 +656,7 @@ public class iConomy extends Plugin {
 				out.newLine();
 				out.close();
 			} catch (Exception es) {
-				log.severe("[iCurrency Buy Logging] " + es.getMessage());
+				log.severe("[iConomy Buy Logging] " + es.getMessage());
 			}
 		} else if (type.equalsIgnoreCase("sell") && this.logSell) {
 			try {
@@ -628,7 +666,7 @@ public class iConomy extends Plugin {
 				out.newLine();
 				out.close();
 			} catch (Exception es) {
-				log.severe("[iCurrency Sell Logging] " + es.getMessage());
+				log.severe("[iConomy Sell Logging] " + es.getMessage());
 			}
 		}
 	}
@@ -1582,7 +1620,7 @@ public class iConomy extends Plugin {
 			String[] data = prize.split(";");
 			int percent = Integer.parseInt(data[0]);
 			int item = Integer.parseInt(data[1]);
-			int amount = Integer.parseInt(data[1]);
+			int amount = Integer.parseInt(data[2]);
 			int chance = generator.nextInt(100);
 			int amountGiven = (amount > 1) ? generator.nextInt(amount) : 1;
 			String itemName = (String) this.items.get(cInt(item));
@@ -2206,12 +2244,12 @@ public class iConomy extends Plugin {
 						} else if (p.can(player, "bid")) {
 							int amount = Integer.parseInt(split[2]);
 
-							if(amount < 1) {
-								player.sendMessage(Colors.Rose + "You must bid at least 1 "+p.moneyName+"!");
+							if(amount < p.auctionCurAmount) {
+								player.sendMessage(Colors.Rose + "You must bid at least over "+p.auctionCurAmount+p.moneyName+"!");
 								return true;
 							}
 
-							if(amount+p.auctionCurAmount > p.getBalance(player)) {
+							if(amount > p.getBalance(player)) {
 								player.sendMessage(Colors.Rose + "You cannot bid more than you have!");
 								p.showBalance(player.getName(), player, true);
 								return true;
@@ -2264,12 +2302,12 @@ public class iConomy extends Plugin {
 							int amount = Integer.parseInt(split[2]);
 							int secret = 0;
 
-							if(amount < 1) {
-								player.sendMessage(Colors.Rose + "You must bid at least 1 "+p.moneyName+"!");
+							if(amount < p.auctionCurAmount) {
+								player.sendMessage(Colors.Rose + "You must bid at least over "+p.auctionCurAmount+p.moneyName+"!");
 								return true;
 							}
 
-							if(p.auctionCurAmount > p.getBalance(player)) {
+							if(amount > p.getBalance(player)) {
 								player.sendMessage(Colors.Rose + "You cannot bid more than you have!");
 								p.showBalance(player.getName(), player, true);
 								return true;
