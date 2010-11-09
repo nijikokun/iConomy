@@ -4,7 +4,7 @@ import java.util.logging.Logger;
 
 public final class iData implements Serializable {
 	protected static final Logger log = Logger.getLogger("Minecraft");
-	private iProperty accounts;
+	public iProperty accounts;
 	private int startingBalance;
 
 	// Serial

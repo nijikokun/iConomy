@@ -55,7 +55,7 @@ public final class iProperty {
 			if (line.trim().length()==0) continue;
 			if (line.charAt(0)=='#') continue;
 			int delimPosition = line.indexOf('=');
-			String key = line.substring(0, delimPosition-1).trim();
+			String key = line.substring(0, delimPosition).trim();
 			String value = line.substring(delimPosition+1).trim();
 			map.put(key, value);
 		}

@@ -1,18 +1,22 @@
 import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
+import java.util.LinkedList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.Map;
+import java.util.Random;
+import java.util.TreeMap;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.logging.Logger;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import org.apache.commons.collections.BidiMap;
 import org.apache.commons.collections.bidimap.*;
 import java.sql.*;
-import java.util.Map;
-import java.util.Random;
 
 public class iConomy extends Plugin {
 	protected static final Logger log = Logger.getLogger("Minecraft");
@@ -119,6 +123,7 @@ public class iConomy extends Plugin {
 	public boolean logPay;
 	public boolean logBuy;
 	public boolean logSell;
+	private boolean logAuction;
 
 	// Tickets
 	public int ticketCost;
@@ -131,8 +136,8 @@ public class iConomy extends Plugin {
 	private String db;
 
 	// Versioning
-	private String version = "0.9.3.6";
-	private String sversion = "0.5";
+	private String version = "0.9.3.7";
+	private String sversion = "0.6";
 	private String aversion = "0.5";
 	private String lversion = "0.3";
 
@@ -220,7 +225,7 @@ public class iConomy extends Plugin {
 			}
 
 			if (this.can(player, "credit")) {
-				player.sendMessage(Colors.Rose + "/money credit <a> <p> - Give a player money");
+				player.sendMessage(Colors.Rose + "/money credit <p> <a> - Give a player money");
 			}
 
 			if (this.can(player, "debit")) {
@@ -244,10 +249,12 @@ public class iConomy extends Plugin {
 		} else if (type.equals("shop")) {
 			player.sendMessage(Colors.Rose + "iConomy [Shop] v" + this.sversion + " - by Nijikokun");
 			player.sendMessage(Colors.Rose + "---------------");
-			player.sendMessage(Colors.Rose + "<i> = item, <a> = amount");
+			player.sendMessage(Colors.Rose + "<i> = item, <a> = amount, [] = optional");
 			player.sendMessage(Colors.Rose + "---------------");
 			player.sendMessage(Colors.Rose + "/shop <i> - Shows amount per item for sell/buy");
 			player.sendMessage(Colors.Rose + "/shop <i> <a> - Shows amount per <a> for sell/buy");
+			player.sendMessage(Colors.Rose + "/shop list buy [page #] - Shows buying list");
+			player.sendMessage(Colors.Rose + "/shop list sell [page #] - Shows selling list");
 
 			if (this.can(player, "buy")) {
 				player.sendMessage(Colors.Rose + "/shop buy <i> - Purchase 1 item");
@@ -348,6 +355,7 @@ public class iConomy extends Plugin {
 		this.logPay = this.props.getBoolean("log-pay", false);
 		this.logBuy = this.props.getBoolean("log-buy", false);
 		this.logSell = this.props.getBoolean("log-sell", false);
+		this.logAuction = this.props.getBoolean("log-auction", false);
 
 		// Buy / Sell messages
 		this.sellGive = this.props.getString("sell-success", "Your account has been credited with %s!");
@@ -668,6 +676,16 @@ public class iConomy extends Plugin {
 			} catch (Exception es) {
 				log.severe("[iConomy Sell Logging] " + es.getMessage());
 			}
+		} else if (type.equalsIgnoreCase("auction") && this.logAuction) {
+			try {
+				FileWriter fstream = new FileWriter(directory + lDirectory + "auction.log", true);
+				BufferedWriter out = new BufferedWriter(fstream);
+				out.write(date + "|" + data);
+				out.newLine();
+				out.close();
+			} catch (Exception es) {
+				log.severe("[iConomy Auction Loggin] " + es.getMessage());
+			}
 		}
 	}
 
@@ -842,6 +860,110 @@ public class iConomy extends Plugin {
 					return cost;
 				}
 			}
+		}
+	}
+
+	public void doSellList(Player player, int page) {
+		List available = new ArrayList();
+		Map aList;
+
+		try {
+			aList = this.selling.returnMap();
+		} catch (Exception ex) {
+			log.info("[iConomy] Listing failed for buying list"); return;
+		}
+
+		for (Object key: aList.keySet()) {
+			String cost = (String) aList.get(key);
+			String name = (String) key;
+			Boolean bundle = false;
+			int perBundle = 0;
+
+			if(cost.equals("0")) {
+				continue;
+			} else if(cost.contains(",")) {
+				String[] item = cost.split(",");
+				perBundle = Integer.parseInt(item[0]);
+				cost = item[1];
+			}
+
+			if(bundle)
+				available.add(Colors.Green + name + Colors.LightGray + " is worth " + Colors.Green + cost + this.moneyName + Colors.LightGray + " at " + Colors.Green + perBundle + Colors.LightGray + " per bundle.");
+			else {
+				available.add(Colors.Green + name + Colors.LightGray + " is worth " + Colors.Green + cost + this.moneyName + Colors.LightGray + " per item.");
+			}
+		}
+
+		player.sendMessage(Colors.White + "Shop Selling (Page " + Colors.Green  + (page) + Colors.White + " of " + Colors.Green  + (int)Math.ceil(available.size() / 10.0D) + Colors.White + "):");
+
+		try {
+			int amount = page;
+
+			if (amount > 0){
+				amount = (amount - 1) * 10;
+			} else {
+				amount = 0;
+			}
+
+			for (int i = amount; i < amount + 10; i++)
+				if (available.size() > i)
+					player.sendMessage((String)available.get(i));
+		}
+		catch (NumberFormatException ex)
+		{
+			player.sendMessage("§cNot a valid page number.");
+		}
+	}
+
+	public void doBuyList(Player player, int page) {
+		List available = new ArrayList();
+		Map aList;
+
+		try {
+			aList = this.buying.returnMap();
+		} catch (Exception ex) {
+			log.info("[iConomy] Listing failed for buying list"); return;
+		}
+
+		for (Object key: aList.keySet()) {
+			String cost = (String) aList.get(key);
+			String name = (String) key;
+			Boolean bundle = false;
+			int perBundle = 0;
+
+			if(cost.equals("0")) {
+				continue;
+			} else if(cost.contains(",")) {
+				String[] item = cost.split(",");
+				perBundle = Integer.parseInt(item[0]);
+				cost = item[1];
+			}
+
+			if(bundle)
+				available.add(Colors.Green + name + Colors.LightGray + " costs " + Colors.Green + cost + this.moneyName + Colors.LightGray + " at " + Colors.Green + perBundle + Colors.LightGray + " per bundle.");
+			else {
+				available.add(Colors.Green + name + Colors.LightGray + " costs " + Colors.Green + cost + this.moneyName + Colors.LightGray + " per item.");
+			}
+		}
+
+		player.sendMessage(Colors.White + "Shop Buying (Page " + Colors.Green  + (page) + Colors.White + " of " + Colors.Green  + (int)Math.ceil(available.size() / 10.0D) + Colors.White + "):");
+
+		try {
+			int amount = page;
+
+			if (amount > 0){
+				amount = (amount - 1) * 10;
+			} else {
+				amount = 0;
+			}
+
+			for (int i = amount; i < amount + 10; i++)
+				if (available.size() > i)
+					player.sendMessage((String)available.get(i));
+		}
+		catch (NumberFormatException ex)
+		{
+			player.sendMessage("§cNot a valid page number.");
 		}
 	}
 
@@ -1153,16 +1275,70 @@ public class iConomy extends Plugin {
 	 * If not you isme is false, if you isme is true.
 	 */
 	public void rank(Player player, Player local, boolean isMe) {
-		if (!this.rankedList.contains(player.getName())) {
-			insertIntoRankedList(player.getName());
-		}
+		if (this.mysql) {
+			Connection conn = null;
+			PreparedStatement ps = null;
+			ResultSet rs = null;
+			int i = 1;
 
-		int i = this.rankedList.indexOf(player.getName()) + 1;
+			try {
+				conn = this.data.MySQL();
+				ps = conn.prepareStatement("SELECT player,balance FROM iBalances ORDER BY balance DESC");
+				rs = ps.executeQuery();
 
-		if (isMe) {
-			player.sendMessage(Colors.LightGray + "Your rank is " + Colors.Green + i);
+				while (rs.next()) {
+					if (isMe) {
+						if (rs.getString("player").equalsIgnoreCase(player.getName())) {
+							player.sendMessage(Colors.LightGray + "Your rank is " + Colors.Green + i);
+							break;
+						}
+					} else {
+						if (rs.getString("player").equalsIgnoreCase(local.getName())) {
+							player.sendMessage(Colors.Green + rs.getString("player") + Colors.LightGray + " rank is " + Colors.Green + i);
+							break;
+						}
+					}
+					i++;
+				}
+			} catch (SQLException ex) {
+				log.severe("[iConomy] Unable to grab the sqlrank for from database!");
+			} finally {
+				try {
+					if (ps != null) { ps.close(); }
+					if (rs != null) { rs.close(); }
+					if (conn != null) { conn.close(); }
+				} catch (SQLException ex) { }
+			}
 		} else {
-			local.sendMessage(Colors.Green + player.getName() + Colors.LightGray + " rank is " + Colors.Green + i);
+			Map accounts;
+			TreeMap<String,Integer> sorted_accounts = null;
+			ValueComparator bvc = null;
+			int i = 1;
+
+			try {
+				accounts = this.data.accounts.returnMap();
+				bvc =  new ValueComparator(accounts);
+				sorted_accounts = new TreeMap(bvc);
+				sorted_accounts.putAll(accounts);
+			} catch (Exception ex) {
+				Logger.getLogger(iConomy.class.getName()).log(Level.SEVERE, null, ex);
+			}
+
+			for (Object key : sorted_accounts.keySet()) {
+				String name = (String) key;
+
+				if (isMe) {
+					if (name.equalsIgnoreCase(player.getName())) {
+						player.sendMessage(Colors.LightGray + "Your rank is " + Colors.Green + i); break;
+					}
+				} else {
+					if (name.equalsIgnoreCase(local.getName())) {
+						player.sendMessage(Colors.Green + name + Colors.LightGray + " rank is " + Colors.Green + i); break;
+					}
+				}
+
+				i++;
+			}
 		}
 	}
 
@@ -1172,22 +1348,71 @@ public class iConomy extends Plugin {
 	 * Amount shown is determined by... well the amount given.
 	 */
 	public void top(Player player, int amount) {
-		player.sendMessage(Colors.LightGray + "Top " + Colors.Green + amount + Colors.LightGray + " Richest People Recently Online:");
+		if (this.mysql) {
+			Connection conn = null;
+			PreparedStatement ps = null;
+			ResultSet rs = null;
+			int i = 1;
 
-		if (this.rankedList.size() < 1) {
-			player.sendMessage(Colors.LightGray + "   Nobody Yet!");
-		}
+			try {
+				conn = this.data.MySQL();
+				ps = conn.prepareStatement("SELECT player,balance FROM iBalances ORDER BY balance DESC LIMIT 0,?");
+				ps.setInt(1, amount);
+				rs = ps.executeQuery();
+				player.sendMessage(Colors.LightGray + "Top " + Colors.Green + amount + Colors.LightGray + " Richest People:");
 
-		if (amount > this.rankedList.size()) {
-			amount = this.rankedList.size();
-		}
+				while (rs.next()) {
+					player.sendMessage(Colors.LightGray + "   " + i + ". " + Colors.Green + rs.getString("player") + Colors.LightGray + " - " + Colors.Green + rs.getInt("balance") + this.moneyName);
+					i++;
+				}
+			} catch (SQLException ex) {
+				log.severe("[iConomy] Unable to grab the sqltop from database!");
+			} finally {
+				try {
+					if (ps != null) { ps.close(); }
+					if (rs != null) { rs.close(); }
+					if (conn != null) { conn.close(); }
+				} catch (SQLException ex) { }
+			}
 
-		for (int i = 0; (i < amount) && (i < this.rankedList.size()); i++) {
-			String rankedPlayer = (String) this.rankedList.get(i);
-			int j = i + 1;
+		} else {
+			Map accounts;
+			TreeMap<String,Integer> sorted_accounts = null;
+			ValueComparator bvc = null;
+			int i = 1;
 
-			// Send top players
-			player.sendMessage(Colors.LightGray + "   " + j + ". " + Colors.Green + rankedPlayer + Colors.LightGray + " - " + Colors.Green + this.data.getBalance(rankedPlayer) + this.moneyName);
+			try {
+				accounts = this.data.accounts.returnMap();
+				bvc =  new ValueComparator(accounts);
+				sorted_accounts = new TreeMap(bvc);
+				sorted_accounts.putAll(accounts);
+			} catch (Exception ex) {
+				log.severe("[iConomy] Unable to retrieve array of balances!");
+			}
+
+			player.sendMessage(Colors.LightGray + "Top " + Colors.Green + amount + Colors.LightGray + " Richest People:");
+
+			if (sorted_accounts.size() < 1) {
+				player.sendMessage(Colors.LightGray + "   Nobody Yet!"); return;
+			}
+
+			if (amount > sorted_accounts.size()) {
+				amount = sorted_accounts.size();
+			}
+
+			for (Object key : sorted_accounts.keySet()) {
+				String name = (String) key;
+				String balance = "" + sorted_accounts.get(name);
+
+				if(i <= amount) {
+					// Send top players
+					player.sendMessage(Colors.LightGray + "   " + i + ". " + Colors.Green + name + Colors.LightGray + " - " + Colors.Green + balance + this.moneyName);
+				} else {
+					break;
+				}
+
+				i++;
+			}
 		}
 	}
 
@@ -1254,6 +1479,9 @@ public class iConomy extends Plugin {
 			if(debugging)
 				log.info("[iConomy Debugging] [" + player + "] [" + inter + "] [" + itemId + "] [" + startingBid + "] [" + minBid + "] [" + maxBid + "] [#20349]");
 
+
+			this.shopLog("auction", player.getName() + "|null|0|205|"+itemId+"|"+inter+"|"+startingBid+"|"+minBid+"|"+maxBid);
+
 			return false;
 		} else {
 			bag.updateInventory();
@@ -1270,6 +1498,8 @@ public class iConomy extends Plugin {
 		this.auctionCurBidCount = 0;
 		this.auctionMin = minBid;
 		this.auctionReserve = maxBid;
+
+		this.shopLog("auction", player.getName() + "|null|1|205|"+this.auctionItem+"|"+this.auctionAmount+"|"+this.auctionCurAmount+"|"+this.auctionCurBidCount+"|"+this.auctionCurBid+"|"+this.auctionCurSecretBid+"|"+this.auctionReserveMet+"|"+this.auctionReserve);
 
 		// Setup finals
 		final iConomy iHateJava = this;
@@ -1338,6 +1568,8 @@ public class iConomy extends Plugin {
 						if(debugging)
 							log.info("[iConomy Debugging] [" + player + "] [" + amount + "] [" + secret + "] ["+this.auctionCurAmount+"] ["+this.auctionCurBidCount+"] ["+this.auctionCurBid+"] ["+this.auctionCurSecretBid+"] [#20350]");
 
+						this.shopLog("auction", player.getName() + "|"+this.auctionCurName+"|1|200|" + amount + "|"+secret+"|"+this.auctionItem+"|"+this.auctionAmount+"|"+this.auctionCurAmount+"|"+this.auctionCurBidCount+"|"+this.auctionCurBid+"|"+this.auctionCurSecretBid+"|"+this.auctionReserveMet+"|"+this.auctionReserve);
+
 					} else {
 						Player previous = this.getPlayer(this.auctionCurName);
 
@@ -1364,6 +1596,7 @@ public class iConomy extends Plugin {
 				if(debugging)
 					log.info("[iConomy Debugging] [" + player + "] [" + amount + "] [" + secret + "] ["+this.auctionCurAmount+"] ["+this.auctionCurBidCount+"] ["+this.auctionCurBid+"] ["+this.auctionCurSecretBid+"] [#20351]");
 
+				this.shopLog("auction", player.getName() + "|"+this.auctionCurName+"|1|201|" + amount + "|"+secret+"|"+this.auctionItem+"|"+this.auctionAmount+"|"+this.auctionCurAmount+"|"+this.auctionCurBidCount+"|"+this.auctionCurBid+"|"+this.auctionCurSecretBid+"|"+this.auctionReserveMet+"|"+this.auctionReserve);
 			}
 
 			if(this.auctionCurAmount >= this.auctionReserve && this.auctionReserve != 0 && !this.auctionReserveMet) {
@@ -1373,6 +1606,7 @@ public class iConomy extends Plugin {
 				if(debugging)
 					log.info("[iConomy Debugging] [" + player + "] [" + amount + "] [" + secret + "] ["+this.auctionCurAmount+"] ["+this.auctionReserve+"] ["+this.auctionReserveMet+"] [#20352]");
 
+				this.shopLog("auction", player.getName() + "|"+this.auctionCurName+"|1|202|" + amount + "|"+secret+"|"+this.auctionItem+"|"+this.auctionAmount+"|"+this.auctionCurAmount+"|"+this.auctionCurBidCount+"|"+this.auctionCurBid+"|"+this.auctionCurSecretBid+"|"+this.auctionReserveMet+"|"+this.auctionReserve);
 			} else {
 				if(outbid) {
 					this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Green + this.auctionCurName + Colors.LightGray + " is now in the lead!");
@@ -1385,6 +1619,7 @@ public class iConomy extends Plugin {
 			if(debugging)
 				log.info("[iConomy Debugging] [" + player + "] [" + amount + "] [" + secret + "] ["+this.auctionCurAmount+"] ["+this.auctionCurBidCount+"] ["+this.auctionCurBid+"] ["+this.auctionCurSecretBid+"] [#20351]");
 
+			this.shopLog("auction", player.getName() + "|"+this.auctionCurName+"|0|203|" + amount + "|"+secret+"|"+this.auctionItem+"|"+this.auctionAmount+"|"+this.auctionCurAmount+"|"+this.auctionCurBidCount+"|"+this.auctionCurBid+"|"+this.auctionCurSecretBid+"|"+this.auctionReserveMet+"|"+this.auctionReserve);
 		}
 	}
 
@@ -1401,6 +1636,8 @@ public class iConomy extends Plugin {
 
 				if(debugging)
 					log.info("[iConomy Debugging] [" + player + "] ["+auctioner+"] ["+this.auctionItem+"] ["+this.auctionAmount+"] ["+this.auctionCurAmount+"] ["+this.auctionCurBidCount+"] ["+this.auctionCurBid+"] ["+this.auctionCurSecretBid+"] [#20352]");
+
+				this.shopLog("auction", player.getName() + "|"+this.auctionStarter+"|1|204|"+this.auctionItem+"|"+this.auctionAmount+"|"+this.auctionCurAmount+"|"+this.auctionCurBidCount+"|"+this.auctionCurBid+"|"+this.auctionCurSecretBid+"|"+this.auctionReserveMet+"|"+this.auctionReserve);
 
 				if(player == null && auctioner == null) {
 					this.auctions.setString(this.auctionCurName, this.auctionItem + "," + this.auctionAmount + "," + this.auctionCurAmount);
@@ -1445,6 +1682,7 @@ public class iConomy extends Plugin {
 				if(debugging)
 					log.info("[iConomy Debugging] [" + player + "] ["+this.auctionCurName+"] ["+this.auctionItem+"] ["+this.auctionAmount+"] ["+this.auctionCurAmount+"] ["+this.auctionCurBidCount+"] ["+this.auctionCurBid+"] ["+this.auctionCurSecretBid+"] [#20353]");
 
+				this.shopLog("auction", player.getName() + "|"+this.auctionStarter+"|0|204|"+this.auctionItem+"|"+this.auctionAmount+"|"+this.auctionCurAmount+"|"+this.auctionCurBidCount+"|"+this.auctionCurBid+"|"+this.auctionCurSecretBid+"|"+this.auctionReserveMet+"|"+this.auctionReserve);
 				this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Has ended. No winner as the minimum bid was not met.");
 			}
 		} else {
@@ -1459,6 +1697,8 @@ public class iConomy extends Plugin {
 			if(debugging)
 				log.info("[iConomy Debugging] [" + player + "] ["+this.auctionCurName+"] ["+this.auctionItem+"] ["+this.auctionAmount+"] ["+this.auctionCurAmount+"] ["+this.auctionCurBidCount+"] ["+this.auctionCurBid+"] ["+this.auctionCurSecretBid+"] [#20354]");
 
+
+			this.shopLog("auction", player.getName() + "|"+this.auctionStarter+"|-1|204|"+this.auctionItem+"|"+this.auctionAmount+"|"+this.auctionCurAmount+"|"+this.auctionCurBidCount+"|"+this.auctionCurBid+"|"+this.auctionCurSecretBid+"|"+this.auctionReserveMet+"|"+this.auctionReserve);
 			this.broadcast(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] " + Colors.Yellow + " Has ended with no bids.");
 		}
 
@@ -1629,7 +1869,7 @@ public class iConomy extends Plugin {
 			if(chance < percent) {
 				if(amountGiven != 0) {
 					player.giveItem(item, amountGiven);
-					this.broadcast(this.lotteryTag + Colors.Gold + " " + String.format(this.lotteryWinner, player.getName(), amount, itemName));
+					this.broadcast(this.lotteryTag + Colors.Gold + " " + String.format(this.lotteryWinner, player.getName(), amountGiven, itemName));
 					// player.sendMessage(this.lotteryTag + Colors.Gold + " Enjoy your items :)!");
 				} else {
 					player.sendMessage(this.lotteryTag + Colors.LightGray + " " + this.lotteryLoser);
@@ -2554,8 +2794,8 @@ public class iConomy extends Plugin {
 							return true;
 						} else {
 							player.sendMessage(Colors.Rose + "Usage: /shop [command|item|itemID] [item] [amount]");
-							player.sendMessage(Colors.Rose + "    Commands: buy, sell, help");
-							player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, ?");
+							player.sendMessage(Colors.Rose + "    Commands: list, buy, sell, help");
+							player.sendMessage(Colors.Rose + "Alt-Commands: -l, -b, -s, ?");
 							return true;
 						}
 					}
@@ -2565,6 +2805,19 @@ public class iConomy extends Plugin {
 				if ((split.length < 4)) {
 					if (split[1].equalsIgnoreCase("?") || split[1].equalsIgnoreCase("help")) {
 						p.halp(player, "shop");
+						return true;
+					} else if(split[1].equalsIgnoreCase("-l") || split[1].equalsIgnoreCase("list")) {
+						String type = split[2];
+
+						if(type.equalsIgnoreCase("-b") || type.equalsIgnoreCase("buy")) {
+							p.doBuyList(player, 1);
+						} else if(type.equalsIgnoreCase("-s") || type.equalsIgnoreCase("sell")) {
+							p.doSellList(player, 1);
+						} else {
+							player.sendMessage(Colors.Rose + "Invalid Usage: /shop list [buy|sell] <page>");
+							player.sendMessage(Colors.Rose + "Alt-Usage: -l, -b|-s");
+						}
+
 						return true;
 					} else if (split[1].equalsIgnoreCase("-b") || split[1].equalsIgnoreCase("buy")) {
 						int itemID = 0;
@@ -2777,6 +3030,25 @@ public class iConomy extends Plugin {
 							player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, ?");
 							return true;
 						}
+					} else if(split[1].equalsIgnoreCase("-l") || split[1].equalsIgnoreCase("list")) {
+						String type = split[2];
+
+						int amount = Integer.parseInt(split[3]);
+
+						if (amount < 2 || amount == 1) {
+							amount = 1;
+						}
+
+						if(type.equalsIgnoreCase("-b") || type.equalsIgnoreCase("buy")) {
+							p.doBuyList(player, amount);
+						} else if(type.equalsIgnoreCase("-s") || type.equalsIgnoreCase("sell")) {
+							p.doSellList(player, amount);
+						} else {
+							player.sendMessage(Colors.Rose + "Invalid Usage: /shop list [buy|sell] <page>");
+							player.sendMessage(Colors.Rose + "Alt-Usage: -l, -b|-s");
+						}
+
+						return true;
 					} else if (split[1].equalsIgnoreCase("-s") || split[1].equalsIgnoreCase("sell")) {
 						int itemID = 0;
 
@@ -2840,5 +3112,26 @@ public class iConomy extends Plugin {
 			}
 			return false;
 		}
+	}
+
+	class ValueComparator implements Comparator {
+
+	  Map base;
+	  public ValueComparator(Map base) {
+	      this.base = base;
+	  }
+
+	  public int compare(Object a, Object b) {
+		int ax = Integer.parseInt((String)base.get(a));
+		int bx = Integer.parseInt((String)base.get(b));
+
+	    if(ax < bx) {
+	      return 1;
+	    } else if(ax == bx) {
+	      return 0;
+	    } else {
+	      return -1;
+	    }
+	  }
 	}
 }
