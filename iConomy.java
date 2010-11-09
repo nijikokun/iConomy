@@ -136,8 +136,8 @@ public class iConomy extends Plugin {
 	private String db;
 
 	// Versioning
-	private String version = "0.9.3.7";
-	private String sversion = "0.6";
+	private String version = "0.9.3.9";
+	private String sversion = "0.7";
 	private String aversion = "0.5";
 	private String lversion = "0.3";
 
@@ -297,9 +297,7 @@ public class iConomy extends Plugin {
 	 * Update user state in plugin
 	 */
 	public void updateState(Player player, boolean write) {
-		String str = player.getName();
-		this.rankedList.remove(str);
-		insertIntoRankedList(str);
+		// Depricated
 	}
 
 	private boolean load() {
@@ -1201,22 +1199,24 @@ public class iConomy extends Plugin {
 	/**
 	 * Takes money from player1, and gives it to player2 determined by amount given.
 	 */
-	public void pay(Player player1, Player player2, int amount) {
-		// Playerdata
-		String pdata1 = player1.getName();
-		String pdata2 = player2.getName();
+	public void pay(String pdata1, String pdata2, int amount) {
+		// Check
+		Player player1 = this.getPlayer(pdata1);
+		Player player2 = this.getPlayer(pdata2);
 
 		// Balances
 		int i = this.data.getBalance(pdata1);
 		int j = this.data.getBalance(pdata2);
 
 		if (pdata1.equals(pdata2)) {
-			player1.sendMessage(Colors.Rose + "You cannot send yourself money");
+			if(player1 != null)
+				player1.sendMessage(Colors.Rose + "You cannot send yourself money");
 
 			if(debugging)
 				log.info("[iConomy Debugging] [" + pdata1 + "] [" + pdata2 + "] [" + amount + "] [#20344]");
 		} else if (amount > i) {
-			player1.sendMessage(Colors.Rose + "You do not have enough money.");
+			if(player1 != null)
+				player1.sendMessage(Colors.Rose + "You do not have enough money.");
 
 			if(debugging)
 				log.info("[iConomy Debugging] [" + pdata1 + "] [" + pdata2 + "] [" + amount + "] [#20345]");
@@ -1230,8 +1230,11 @@ public class iConomy extends Plugin {
 			this.data.setBalance(pdata2, j);
 
 			// Send messages
-			player1.sendMessage(Colors.LightGray + "You have sent " + Colors.Green + amount + this.moneyName + Colors.LightGray + " to " + Colors.Green + pdata2);
-			player2.sendMessage(Colors.Green + pdata1 + Colors.LightGray + " has sent you " + Colors.Green + amount + this.moneyName);
+			if(player1 != null)
+				player1.sendMessage(Colors.LightGray + "You have sent " + Colors.Green + amount + this.moneyName + Colors.LightGray + " to " + Colors.Green + pdata2);
+
+			if(player2 != null)
+				player2.sendMessage(Colors.Green + pdata1 + Colors.LightGray + " has sent you " + Colors.Green + amount + this.moneyName);
 			
 			// Log
 			this.shopLog("pay", pdata1 + "|"+pdata2+"|1|200|" + amount);
@@ -1240,8 +1243,11 @@ public class iConomy extends Plugin {
 				log.info("[iConomy Debugging] [" + pdata1 + "] [" + pdata2 + "] [" + amount + "] [#20346]");
 
 			// Show each balance
-			showBalance(pdata1, null, true);
-			showBalance(pdata2, null, true);
+			if(player1 != null)
+				showBalance(pdata1, null, true);
+
+			if(player2 != null)
+				showBalance(pdata2, null, true);
 
 			// Update each players state
 			updateState(player1, false);
@@ -1274,7 +1280,9 @@ public class iConomy extends Plugin {
 	 *
 	 * If not you isme is false, if you isme is true.
 	 */
-	public void rank(Player player, Player local, boolean isMe) {
+	public void rank(String pdata1, String pdata2, boolean isMe) {
+		Player player = this.getPlayer(pdata1);
+
 		if (this.mysql) {
 			Connection conn = null;
 			PreparedStatement ps = null;
@@ -1288,14 +1296,12 @@ public class iConomy extends Plugin {
 
 				while (rs.next()) {
 					if (isMe) {
-						if (rs.getString("player").equalsIgnoreCase(player.getName())) {
-							player.sendMessage(Colors.LightGray + "Your rank is " + Colors.Green + i);
-							break;
+						if (rs.getString("player").equalsIgnoreCase(pdata1)) {
+							player.sendMessage(Colors.LightGray + "Your rank is " + Colors.Green + i); break;
 						}
 					} else {
-						if (rs.getString("player").equalsIgnoreCase(local.getName())) {
-							player.sendMessage(Colors.Green + rs.getString("player") + Colors.LightGray + " rank is " + Colors.Green + i);
-							break;
+						if (rs.getString("player").equalsIgnoreCase(pdata2)) {
+							player.sendMessage(Colors.Green + rs.getString("player") + Colors.LightGray + " rank is " + Colors.Green + i); break;
 						}
 					}
 					i++;
@@ -1328,11 +1334,11 @@ public class iConomy extends Plugin {
 				String name = (String) key;
 
 				if (isMe) {
-					if (name.equalsIgnoreCase(player.getName())) {
+					if (name.equalsIgnoreCase(pdata1)) {
 						player.sendMessage(Colors.LightGray + "Your rank is " + Colors.Green + i); break;
 					}
 				} else {
-					if (name.equalsIgnoreCase(local.getName())) {
+					if (name.equalsIgnoreCase(pdata2)) {
 						player.sendMessage(Colors.Green + name + Colors.LightGray + " rank is " + Colors.Green + i); break;
 					}
 				}
@@ -2035,7 +2041,7 @@ public class iConomy extends Plugin {
 							return false;
 						}
 
-						p.rank(player, null, true);
+						p.rank(player.getName(), null, true);
 						return true;
 					} else if (split[1].equalsIgnoreCase("?") || split[1].equalsIgnoreCase("help")) {
 						p.halp(player, "money");
@@ -2167,6 +2173,8 @@ public class iConomy extends Plugin {
 						//-------------------------------------------------------------
 						// TIER 3 [RANK]
 						//-------------------------------------------------------------
+						String pName = "";
+
 						if (!p.can(player, "rank")) {
 							return false;
 						}
@@ -2174,12 +2182,18 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							player.sendMessage(Colors.Rose + "Player not online: " + split[2]);
-							return true;
+							if(p.data.hasBalance(split[2])) {
+								pName = split[2];
+							} else {
+								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
+								return true;
+							}
+						} else {
+							pName = localPlayer.getName();
 						}
 
 						// Show another players rank
-						p.rank(localPlayer, player, false);
+						rank(pName, player.getName(), false);
 						return true;
 					} else if (split[1].equalsIgnoreCase("?") || split[1].equalsIgnoreCase("help")) {
 						p.halp(player, "money");
@@ -2198,6 +2212,8 @@ public class iConomy extends Plugin {
 						//-------------------------------------------------------------
 						// TIER 4 [PAY]
 						//-------------------------------------------------------------
+						String pName = "";
+
 						if (!p.can(player, "pay")) {
 							return false;
 						}
@@ -2205,8 +2221,14 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							player.sendMessage(Colors.Rose + "Player not online: " + split[2]);
-							return true;
+							if(p.data.hasBalance(split[2])) {
+								pName = split[2];
+							} else {
+								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
+								return true;
+							}
+						} else {
+							pName = localPlayer.getName();
 						}
 
 						i = 0;
@@ -2223,7 +2245,7 @@ public class iConomy extends Plugin {
 						}
 
 						// Pay amount
-						p.pay(player, localPlayer, Integer.parseInt(split[3]));
+						p.pay(player.getName(), pName, Integer.parseInt(split[3]));
 						return true;
 					} else if (split[1].equalsIgnoreCase("-c") || split[1].equalsIgnoreCase("credit")) {
 						//-------------------------------------------------------------
@@ -2364,6 +2386,8 @@ public class iConomy extends Plugin {
 						//-------------------------------------------------------------
 						// TIER 4 [RANK]
 						//-------------------------------------------------------------
+						String pName = "";
+
 						if (!p.can(player, "rank")) {
 							return false;
 						}
@@ -2371,12 +2395,18 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							player.sendMessage(Colors.Rose + "Invalid Usage: /money [-r|rank] <player>");
-							return true;
+							if(p.data.hasBalance(split[2])) {
+								pName = split[2];
+							} else {
+								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
+								return true;
+							}
+						} else {
+							pName = localPlayer.getName();
 						}
 
 						// Show another players rank
-						rank(localPlayer, player, false);
+						rank(pName, player.getName(), false);
 						return true;
 					} else if (split[1].equalsIgnoreCase("?") || split[1].equalsIgnoreCase("help")) {
 						p.halp(player, "money");
