@@ -17,6 +17,7 @@ import java.text.SimpleDateFormat;
 import org.apache.commons.collections.BidiMap;
 import org.apache.commons.collections.bidimap.*;
 import java.sql.*;
+import java.util.HashMap;
 
 public class iConomy extends Plugin {
 	protected static final Logger log = Logger.getLogger("Minecraft");
@@ -136,8 +137,8 @@ public class iConomy extends Plugin {
 	private String db;
 
 	// Versioning
-	private String version = "0.9.3.9";
-	private String sversion = "0.7";
+	private String version = "0.9.3.13";
+	private String sversion = "0.8.5";
 	private String aversion = "0.5";
 	private String lversion = "0.3";
 
@@ -861,40 +862,47 @@ public class iConomy extends Plugin {
 		}
 	}
 
+	public int getRows(String table) {
+		Connection conn = null;
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		int i = 0;
+
+		try {
+			conn = this.data.MySQL();
+
+			if(table.equalsIgnoreCase("ibuy")){
+				ps = conn.prepareStatement("SELECT * FROM iBuy");
+			} else {
+				ps = conn.prepareStatement("SELECT * FROM iSell");
+			}
+
+			rs = ps.executeQuery();
+
+			while(rs.next()) { if(rs.getInt("cost") != 0) { i++; } }
+		} catch (SQLException ex) {
+			log.severe("[iConomy] Unable to count itemlist!");
+		} finally {
+			try {
+				if (ps != null) { ps.close(); }
+				if (rs != null) { rs.close(); }
+				if (conn != null) { conn.close(); }
+			} catch (SQLException ex) { }
+		}
+
+		return i;
+	}
+
 	public void doSellList(Player player, int page) {
 		List available = new ArrayList();
 		Map aList;
 
-		try {
-			aList = this.selling.returnMap();
-		} catch (Exception ex) {
-			log.info("[iConomy] Listing failed for buying list"); return;
-		}
+		if(this.mysql) {
+			Connection conn = null;
+			PreparedStatement ps = null;
+			ResultSet rs = null;
+			int i = 1;
 
-		for (Object key: aList.keySet()) {
-			String cost = (String) aList.get(key);
-			String name = (String) key;
-			Boolean bundle = false;
-			int perBundle = 0;
-
-			if(cost.equals("0")) {
-				continue;
-			} else if(cost.contains(",")) {
-				String[] item = cost.split(",");
-				perBundle = Integer.parseInt(item[0]);
-				cost = item[1];
-			}
-
-			if(bundle)
-				available.add(Colors.Green + name + Colors.LightGray + " is worth " + Colors.Green + cost + this.moneyName + Colors.LightGray + " at " + Colors.Green + perBundle + Colors.LightGray + " per bundle.");
-			else {
-				available.add(Colors.Green + name + Colors.LightGray + " is worth " + Colors.Green + cost + this.moneyName + Colors.LightGray + " per item.");
-			}
-		}
-
-		player.sendMessage(Colors.White + "Shop Selling (Page " + Colors.Green  + (page) + Colors.White + " of " + Colors.Green  + (int)Math.ceil(available.size() / 10.0D) + Colors.White + "):");
-
-		try {
 			int amount = page;
 
 			if (amount > 0){
@@ -903,13 +911,114 @@ public class iConomy extends Plugin {
 				amount = 0;
 			}
 
-			for (int i = amount; i < amount + 10; i++)
-				if (available.size() > i)
-					player.sendMessage((String)available.get(i));
-		}
-		catch (NumberFormatException ex)
-		{
-			player.sendMessage("§cNot a valid page number.");
+			int process = amount+10;
+
+			try {
+				conn = this.data.MySQL();
+				ps = conn.prepareStatement("SELECT id,cost,perbundle FROM iSell ORDER BY cost ASC");
+				rs = ps.executeQuery();
+
+				int rowCount = this.getRows("iSell");
+
+				if(rowCount == 0) {
+					player.sendMessage(Colors.Rose +"No items for selling."); return;
+				}
+
+				player.sendMessage(Colors.White + "Shop Selling (Page " + Colors.Green  + (page) + Colors.White + " of " + Colors.Green  + (int)Math.ceil(rowCount / 10.0D) + Colors.White + "):");
+
+				i = amount;
+				while (rs.next()) {
+					if(i < process) {
+						if(i > amount) {
+							int itemId = rs.getInt("id");
+							int cost = rs.getInt("cost");
+							int perBundle = rs.getInt("perbundle");
+							boolean bundle = false;
+
+							if (cost == 0) {
+								continue;
+							}
+
+							if(perBundle != 0) {
+								bundle = true;
+							}
+
+							String name = (String) this.items.get(cInt(itemId));
+
+							if(bundle)
+								player.sendMessage(Colors.Green + name + Colors.LightGray + " is worth " + Colors.Green + cost + this.moneyName + Colors.LightGray + " at " + Colors.Green + perBundle + Colors.LightGray + " per bundle.");
+							else {
+								player.sendMessage(Colors.Green + name + Colors.LightGray + " is worth " + Colors.Green + cost + this.moneyName + Colors.LightGray + " per item.");
+							}
+						}
+						i++;
+					} else {
+						break;
+					}
+				}
+			} catch (SQLException ex) {
+				log.severe("[iConomy] Unable to grab the itemlist from database!");
+			} finally {
+				try {
+					if (ps != null) { ps.close(); }
+					if (rs != null) { rs.close(); }
+					if (conn != null) { conn.close(); }
+				} catch (SQLException ex) { }
+			}
+		} else {
+			try {
+				aList = this.selling.returnMap();
+			} catch (Exception ex) {
+				log.info("[iConomy] Listing failed for selling list"); return;
+			}
+
+			for (Object key: aList.keySet()) {
+				String cost = (String) aList.get(key);
+				String name = (String) key;
+				Boolean bundle = false;
+				int perBundle = 0;
+
+				if(cost.equals("0")) {
+					continue;
+				} else if(cost.contains(",")) {
+					String[] item = cost.split(",");
+					perBundle = Integer.parseInt(item[0]);
+					cost = item[1];
+					bundle = true;
+				} else {
+					bundle = false;
+				}
+
+				if(bundle)
+					available.add(Colors.Green + name + Colors.LightGray + " is worth " + Colors.Green + cost + this.moneyName + Colors.LightGray + " at " + Colors.Green + perBundle + Colors.LightGray + " per bundle.");
+				else {
+					available.add(Colors.Green + name + Colors.LightGray + " is worth " + Colors.Green + cost + this.moneyName + Colors.LightGray + " per item.");
+				}
+			}
+
+			if(available.isEmpty()) {
+				player.sendMessage(Colors.Rose +"No items for selling."); return;
+			}
+
+			player.sendMessage(Colors.White + "Shop Selling (Page " + Colors.Green  + (page) + Colors.White + " of " + Colors.Green  + (int)Math.ceil(available.size() / 10.0D) + Colors.White + "):");
+
+			try {
+				int amount = page;
+
+				if (amount > 0){
+					amount = (amount - 1) * 10;
+				} else {
+					amount = 0;
+				}
+
+				for (int i = amount; i < amount + 10; i++)
+					if (available.size() > i)
+						player.sendMessage((String)available.get(i));
+			}
+			catch (NumberFormatException ex)
+			{
+				player.sendMessage("§cNot a valid page number.");
+			}
 		}
 	}
 
@@ -917,36 +1026,12 @@ public class iConomy extends Plugin {
 		List available = new ArrayList();
 		Map aList;
 
-		try {
-			aList = this.buying.returnMap();
-		} catch (Exception ex) {
-			log.info("[iConomy] Listing failed for buying list"); return;
-		}
+		if(this.mysql) {
+			Connection conn = null;
+			PreparedStatement ps = null;
+			ResultSet rs = null;
+			int i = 1;
 
-		for (Object key: aList.keySet()) {
-			String cost = (String) aList.get(key);
-			String name = (String) key;
-			Boolean bundle = false;
-			int perBundle = 0;
-
-			if(cost.equals("0")) {
-				continue;
-			} else if(cost.contains(",")) {
-				String[] item = cost.split(",");
-				perBundle = Integer.parseInt(item[0]);
-				cost = item[1];
-			}
-
-			if(bundle)
-				available.add(Colors.Green + name + Colors.LightGray + " costs " + Colors.Green + cost + this.moneyName + Colors.LightGray + " at " + Colors.Green + perBundle + Colors.LightGray + " per bundle.");
-			else {
-				available.add(Colors.Green + name + Colors.LightGray + " costs " + Colors.Green + cost + this.moneyName + Colors.LightGray + " per item.");
-			}
-		}
-
-		player.sendMessage(Colors.White + "Shop Buying (Page " + Colors.Green  + (page) + Colors.White + " of " + Colors.Green  + (int)Math.ceil(available.size() / 10.0D) + Colors.White + "):");
-
-		try {
 			int amount = page;
 
 			if (amount > 0){
@@ -955,13 +1040,113 @@ public class iConomy extends Plugin {
 				amount = 0;
 			}
 
-			for (int i = amount; i < amount + 10; i++)
-				if (available.size() > i)
-					player.sendMessage((String)available.get(i));
-		}
-		catch (NumberFormatException ex)
-		{
-			player.sendMessage("§cNot a valid page number.");
+			int process = amount+10;
+
+			try {
+				conn = this.data.MySQL();
+				ps = conn.prepareStatement("SELECT id,cost,perbundle FROM iBuy ORDER BY cost ASC");
+				rs = ps.executeQuery();
+
+				int rowCount = this.getRows("iBuy");
+
+				if(rowCount == 0) {
+					player.sendMessage(Colors.Rose +"No items for buying."); return;
+				}
+
+				player.sendMessage(Colors.White + "Shop Buying (Page " + Colors.Green  + (page) + Colors.White + " of " + Colors.Green  + (int)Math.ceil(rowCount / 10.0D) + Colors.White + "):");
+
+				while (rs.next()) {
+					if(i < process) {
+						if(i > amount) {
+							int itemId = rs.getInt("id");
+							int cost = rs.getInt("cost");
+							int perBundle = rs.getInt("perbundle");
+							boolean bundle = false;
+
+							if (cost == 0) {
+								continue;
+							}
+
+							if(perBundle != 0) {
+								bundle = true;
+							}
+
+							String name = (String) this.items.get(cInt(itemId));
+
+							if(bundle)
+								player.sendMessage(Colors.Green + name + Colors.LightGray + " costs " + Colors.Green + cost + this.moneyName + Colors.LightGray + " at " + Colors.Green + perBundle + Colors.LightGray + " per bundle.");
+							else {
+								player.sendMessage(Colors.Green + name + Colors.LightGray + " costs " + Colors.Green + cost + this.moneyName + Colors.LightGray + " per item.");
+							}
+						}
+						i++;
+					} else {
+						break;
+					}
+				}
+			} catch (SQLException ex) {
+				log.severe("[iConomy] Unable to grab the itemlist from database!");
+			} finally {
+				try {
+					if (ps != null) { ps.close(); }
+					if (rs != null) { rs.close(); }
+					if (conn != null) { conn.close(); }
+				} catch (SQLException ex) { }
+			}
+		} else {
+			try {
+				aList = this.buying.returnMap();
+			} catch (Exception ex) {
+				log.info("[iConomy] Listing failed for buying list"); return;
+			}
+
+			for (Object key: aList.keySet()) {
+				String cost = (String) aList.get(key);
+				String name = (String) key;
+				Boolean bundle = false;
+				int perBundle = 0;
+
+				if(cost.equals("0")) {
+					continue;
+				} else if(cost.contains(",")) {
+					String[] item = cost.split(",");
+					perBundle = Integer.parseInt(item[0]);
+					cost = item[1];
+					bundle = true;
+				} else {
+					bundle = false;
+				}
+
+				if(bundle)
+					available.add(Colors.Green + name + Colors.LightGray + " costs " + Colors.Green + cost + this.moneyName + Colors.LightGray + " at " + Colors.Green + perBundle + Colors.LightGray + " per bundle.");
+				else {
+					available.add(Colors.Green + name + Colors.LightGray + " costs " + Colors.Green + cost + this.moneyName + Colors.LightGray + " per item.");
+				}
+			}
+
+			if(available.isEmpty()) {
+				player.sendMessage(Colors.Rose +"No items for buying."); return;
+			}
+
+			player.sendMessage(Colors.White + "Shop Buying (Page " + Colors.Green  + (page) + Colors.White + " of " + Colors.Green  + (int)Math.ceil(available.size() / 10.0D) + Colors.White + "):");
+
+			try {
+				int amount = page;
+
+				if (amount > 0){
+					amount = (amount - 1) * 10;
+				} else {
+					amount = 0;
+				}
+
+				for (int i = amount; i < amount + 10; i++)
+					if (available.size() > i)
+						player.sendMessage((String)available.get(i));
+			}
+			catch (NumberFormatException ex)
+			{
+				player.sendMessage("§cNot a valid page number.");
+			}
 		}
 	}
 
@@ -1804,14 +1989,14 @@ public class iConomy extends Plugin {
 
 			try {
 				conn = this.data.MySQL();
-				ps = conn.prepareStatement("SELECT * FROM `iPrizes` WHERE id = (SELECT FLOOR(MAX(id) * RAND()) FROM `iPrizes`) ORDER BY id LIMIT 1");
+				ps = conn.prepareStatement("SELECT * FROM `iPrizes` ORDER BY RAND() LIMIT 1");
 				rs = ps.executeQuery();
 
 				if (rs.next()) {
 					// Settings
 					int percent = rs.getInt("percent");
 					int item = rs.getInt("item");
-					int amount = rs.getInt("max-amount");
+					int amount = rs.getInt("amount");
 
 					return ""+percent+";"+item+";"+amount+";";
 				} else {
@@ -1889,6 +2074,12 @@ public class iConomy extends Plugin {
 				log.info("[iConomy Debugging] [" + player + "] ["+this.data.getBalance(player.getName())+"] ["+amount+"] ["+amountGiven+"] ["+item+"] ["+percent+"] ["+chance+"] ["+itemName+"] [#20359]");
 
 		}
+	}
+
+	public void removeItems(Player player, int material, int amount) {
+		Inventory inv = player.getInventory();
+		inv.removeItem(new Item(material, amount));
+		inv.updateInventory();
 	}
 
 	public boolean canDo(String can, Player player) {
@@ -3142,6 +3333,18 @@ public class iConomy extends Plugin {
 			}
 			return false;
 		}
+
+		/*
+		public boolean onComplexBlockChange(Player player, ComplexBlock block) {
+			return false;
+		}
+		*/
+
+		/*
+		public boolean onSendComplexBlock(Player player, ComplexBlock block) {
+			return false;
+		}
+		*/
 	}
 
 	class ValueComparator implements Comparator {
