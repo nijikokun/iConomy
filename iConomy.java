@@ -2644,13 +2644,17 @@ public class iConomy extends Plugin {
 		ComplexBlock theblock = etc.getServer().getComplexBlock((x+a), (y+b), (z+c));
 
 		if (!(theblock instanceof Sign)) {
-			log.info("No sign");
+			if(debugging)
+				log.info("No sign");
+
 			return false;
 		} else {
 			theSign = (Sign) theblock;
 
 			if ((theSign.getText(1).equalsIgnoreCase("sell") || theSign.getText(1).equalsIgnoreCase("buy"))) {
-				log.info("sign equaled sell or buy");
+				if(debugging)
+					log.info("sign equaled sell or buy");
+
 				return false;
 			}
 
@@ -2658,7 +2662,8 @@ public class iConomy extends Plugin {
 			theSign.setText(3, "In stock: " + stock);
 			theSign.update();
 
-			log.info("I updated at "+ (x+a) + "-" + (y+b) + "-" + (z+c));
+			if(debugging)
+				log.info("I updated at "+ (x+a) + "-" + (y+b) + "-" + (z+c));
 
 			return true;
 		}
