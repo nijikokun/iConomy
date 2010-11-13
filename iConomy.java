@@ -98,7 +98,7 @@ public class iConomy extends Plugin {
 	private String driver, user, pass, db;
 
 	// Versioning
-	private String   version = "0.9.4";
+	private String   version = "0.9.4.4";
 	private String  sversion = "0.8.5";
 	private String  aversion = "0.5";
 	private String  lversion = "0.3";
@@ -2364,6 +2364,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
+				conn = this.data.MySQL();
 				ps = conn.prepareStatement("UPDATE iSign SET amount=? WHERE owner=? AND item=? LIMIT 1");
 				ps.setInt(1, s);
 				ps.setString(2, name);
@@ -2391,6 +2392,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
+				conn = this.data.MySQL();
 				ps = conn.prepareStatement("SELECT * FROM iSign WHERE owner=? AND item=? LIMIT 1");
 				ps.setString(1, name);
 				ps.setInt(2, i);
@@ -2424,6 +2426,8 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
+				conn = this.data.MySQL();
+
 				if(!this.existsSign(name, i)) {
 					ps = conn.prepareStatement("INSERT INTO iSign (owner,item,amount) VALUES(?,?,?)");
 					ps.setString(1, name);
@@ -2541,26 +2545,27 @@ public class iConomy extends Plugin {
 				conn = this.data.MySQL();
 				ps = conn.prepareStatement("SELECT * FROM iSignLocation WHERE owner=? AND item=?");
 				ps.setString(1, name);
+				ps.setInt(2, i);
 				rs = ps.executeQuery();
 
 				while(rs.next()) {
 					if(this.updateSignLocation(rs.getInt("x"), rs.getInt("y"), rs.getInt("z"), 0, 1, 0, i, stock))
-						return;
+						continue;
 
 					if(this.updateSignLocation(rs.getInt("x"), rs.getInt("y"), rs.getInt("z"), 0, -1, 0, i, stock))
-						return;
+						continue;
 
 					if(this.updateSignLocation(rs.getInt("x"), rs.getInt("y"), rs.getInt("z"), 1, 0, 0, i, stock))
-						return;
+						continue;
 
 					if(this.updateSignLocation(rs.getInt("x"), rs.getInt("y"), rs.getInt("z"), -1, 0, 0, i, stock))
-						return;
+						continue;
 
 					if(this.updateSignLocation(rs.getInt("x"), rs.getInt("y"), rs.getInt("z"), 0, 0, 1, i, stock))
-						return;
+						continue;
 
 					if(this.updateSignLocation(rs.getInt("x"), rs.getInt("y"), rs.getInt("z"), 0, 0, -1, i, stock))
-						return;
+						continue;
 				}
 			} catch (SQLException ex) {
 				log.info("[iConomy] Failed to grab sign data: " + ex);
@@ -2598,7 +2603,7 @@ public class iConomy extends Plugin {
 							String[] shopCData = row.split(";");
 
 							if(debugging)
-								log.info("[iConomy Debugging] "+row);
+								log.info("[iConomy Debugging] " + row);
 
 							if(shopCData[0] == null ? "" == null : shopCData[0].equals("") || shopCData[0].equals("|"))
 								continue;
@@ -2607,23 +2612,26 @@ public class iConomy extends Plugin {
 							int y = Integer.parseInt(shopCData[1]);
 							int z = Integer.parseInt(shopCData[2]);
 
+							if(debugging)
+								log.info(x + " - " + y + " - " + z);
+
 							if(this.updateSignLocation(x, y, z, 0, 1, 0, i, stock))
-								return;
+								continue;
 
 							if(this.updateSignLocation(x, y, z, 0, -1, 0, i, stock))
-								return;
+								continue;
 
 							if(this.updateSignLocation(x, y, z, 1, 0, 0, i, stock))
-								return;
+								continue;
 
 							if(this.updateSignLocation(x, y, z, -1, 0, 0, i, stock))
-								return;
+								continue;
 
 							if(this.updateSignLocation(x, y, z, 0, 0, 1, i, stock))
-								return;
+								continue;
 
 							if(this.updateSignLocation(x, y, z, 0, 0, -1, i, stock))
-								return;
+								continue;
 						}
 					}
 				}
@@ -2633,20 +2641,24 @@ public class iConomy extends Plugin {
 
 	public boolean updateSignLocation(int x, int y, int z, int a, int b, int c, int i, int stock){
 		Sign theSign;
-		ComplexBlock theblock = etc.getServer().getComplexBlock(x + a, y + b, z + c);
+		ComplexBlock theblock = etc.getServer().getComplexBlock((x+a), (y+b), (z+c));
 
 		if (!(theblock instanceof Sign)) {
+			log.info("No sign");
 			return false;
 		} else {
 			theSign = (Sign) theblock;
 
-			if (!(theSign.getText(1).equalsIgnoreCase("sell") || theSign.getText(1).equalsIgnoreCase("buy"))) {
+			if ((theSign.getText(1).equalsIgnoreCase("sell") || theSign.getText(1).equalsIgnoreCase("buy"))) {
+				log.info("sign equaled sell or buy");
 				return false;
 			}
 
 			theSign.setText(1, this.itemName(cInt(i)));
 			theSign.setText(3, "In stock: " + stock);
 			theSign.update();
+
+			log.info("I updated at "+ (x+a) + "-" + (y+b) + "-" + (z+c));
 
 			return true;
 		}
@@ -4001,7 +4013,7 @@ public class iConomy extends Plugin {
 				player.sendMessage(String.format(p.signBuyCreated, amount, p.itemName(String.valueOf(item)), sign.getText(3) + p.moneyName));
 			}
 
-			p.setSign(player.getName(), sign.getX(), sign.getY(), sign.getZ(), item, amount);
+			p.setSign(player.getName(), sign.getX(), sign.getY(), sign.getZ(), item, 0);
 			return false;
 		}
 
@@ -4045,12 +4057,14 @@ public class iConomy extends Plugin {
 				if (amount <= 0) {
 					player.sendMessage(String.format(p.signAmountGreaterThan, 0));
 					sign.setText(0, ""); sign.setText(1, ""); sign.setText(2, ""); sign.setText(3, "");
+					sign.update();
 					return false;
 				}
 
 				if(!p.existsSign(sign.getText(0), i)) {
 					player.sendMessage(p.signInvalid);
 					sign.setText(0, ""); sign.setText(1, ""); sign.setText(2, ""); sign.setText(3, "");
+					sign.update();
 					return false;
 				}
 
@@ -4096,6 +4110,10 @@ public class iConomy extends Plugin {
 		}
 
 		public boolean onBlockDestroy(Player player, Block block) {
+
+			if(!p.globalSigns)
+				return false;
+
 			ComplexBlock theblock = etc.getServer().getComplexBlock(block.getX(), block.getY(), block.getZ());
 
 			if (!(theblock instanceof Sign)) {
@@ -4107,6 +4125,13 @@ public class iConomy extends Plugin {
 					return false;
 				}
 
+				String[] split = sign.getText(2).split(" ");
+				int i = Integer.parseInt(split[0]);
+
+				if(!p.existsSign(sign.getText(0), i)) {
+					return false;
+				}
+
 				if(!sign.getText(0).equalsIgnoreCase(player.getName())){
 					if(block.getStatus() == 0 || block.getStatus() == 1 || block.getStatus() == 3) {
 						player.sendMessage("This sign is protected.");
@@ -4114,10 +4139,9 @@ public class iConomy extends Plugin {
 					}
 				} else {
 					if(block.getStatus() == 3){
-						String[] split = sign.getText(2).split(" ");
-						int i = Integer.parseInt(split[0]);
 						p.deleteSign(player.getName(), i);
-
+						sign.setText(0, ""); sign.setText(1, ""); sign.setText(2, ""); sign.setText(3, "");
+						sign.update();
 						return false;
 					}
 				}
