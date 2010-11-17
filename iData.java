@@ -31,7 +31,7 @@ public final class iData implements Serializable {
 		iData.db = db;
 
 		if (!mysql) {
-			this.accounts = new iProperty("iConomy/balances.properties");
+			this.accounts = new iProperty(mainDir + "balances.properties");
 		} else {
 			// MySQL
 			iData.mysql = true;
@@ -67,11 +67,7 @@ public final class iData implements Serializable {
 				ps.setString(1, playerName);
 				rs = ps.executeQuery();
 
-				if (rs.next()) {
-					has = true;
-				} else {
-					has = false;
-				}
+				has = (rs.next()) ? true : false;
 			} catch (SQLException ex) {
 				log.severe("[iConomy] Unable to grab the balance for [" + playerName + "] from database!");
 			} finally {
@@ -119,7 +115,7 @@ public final class iData implements Serializable {
 				} catch (SQLException ex) { }
 			}
 		} else {
-			return this.accounts.getInt(playerName, this.startingBalance);
+			return (this.hasBalance(playerName)) ? this.accounts.getInt(playerName) : this.accounts.getInt(playerName, this.startingBalance);
 		}
 
 		return balance;

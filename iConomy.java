@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
-import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.Map;
@@ -31,7 +30,7 @@ public class iConomy extends Plugin {
 	private String directory = "iConomy/", lDirectory = "logs/";
 
 	// Property Files
-	private iProperty settings, prizes, buying, selling, auctions, auctioner, itemNames, sign, signOwners, signLocation;
+	private iProperty settings, prizes, buying, selling, auctions, auctioner, itemNames, sign, signOwners, signLocation, trades;
 
 	// Hashmaps for lottery
 	private Map<String, String> hashPrizes;
@@ -58,9 +57,10 @@ public class iConomy extends Plugin {
 
 	// Permissions
 	public String canPay, canCredit, canDebit, canReset, canRank, canTop, canView, canSell, canBuy, canAuction, canBid, canEnd, canLottery, canSign, canSignSell, canSignBuy;
+	public String canTrade;
 
 	// Shop Details
-	public boolean globalAuction, globalShop, physicalShop, globalLottery, globalSigns;
+	public boolean globalAuction, globalShop, physicalShop, globalLottery, globalSigns, globalStock;
 
 	// Auction settings
 	public Timer auctionTimer = new Timer();
@@ -82,6 +82,7 @@ public class iConomy extends Plugin {
 	// Sign Shop Template
 	public String signFailedToParse, signAmountGreaterThan, signValuesNotNumerical, signInvalidItem, signMaxBuySell, signTransactionGreaterThan, signSellCreated, signBuyCreated;
 	private String signWait, signOwnerBankrupt, signUpgradeAmount, signUpgradeExists, signSold, signStocked, signNotEnough, signNotInStock,signBoughtAmount,signLeftAmount, signNotEnoughp, signInvalid;
+	private String signNotInStocky,signNoExists;
 
 	// Logging
 	public boolean logPay, logBuy, logSell, logAuction;
@@ -98,11 +99,12 @@ public class iConomy extends Plugin {
 	private String driver, user, pass, db;
 
 	// Versioning
-	private String   version = "0.9.4.4";
+	private String   version = "0.9.4.7";
 	private String  sversion = "0.8.5";
 	private String  aversion = "0.5";
 	private String  lversion = "0.3";
-	private String ssversion = "0.2a";
+	private String ssversion = "0.3a";
+	private String  tversion = "0.1a";
 
 	public iConomy() {
 		this.settings = null;
@@ -141,7 +143,7 @@ public class iConomy extends Plugin {
 			etc.getInstance().addCommand("/lottery", "- Test your luck on the lottery!");
 
 		if(this.globalSigns)
-			etc.getInstance().addCommand("/lottery", "- Test your luck on the lottery!");
+			etc.getInstance().addCommand("/sign", "? - For more information");
 	}
 
 	public void initialize() {
@@ -164,10 +166,13 @@ public class iConomy extends Plugin {
 		if(this.globalLottery)
 			etc.getInstance().removeCommand("/lottery");
 
+		if(this.globalSigns)
+			etc.getInstance().removeCommand("/sign");
+
 		if (this.mTime1 != null)
 			this.mTime1.cancel();
 
-		if (this.mTime2 != null) 
+		if (this.mTime2 != null)
 			this.mTime2.cancel();
 
 		if (this.auctionTimer != null)
@@ -221,6 +226,7 @@ public class iConomy extends Plugin {
 			player.sendMessage(Colors.Rose + "---------------");
 			player.sendMessage(Colors.Rose + "/shop <i> - Shows amount per item for sell/buy");
 			player.sendMessage(Colors.Rose + "/shop <i> <a> - Shows amount per <a> for sell/buy");
+			player.sendMessage(Colors.Rose + "/shop stock [page #] - Shows stock");
 			player.sendMessage(Colors.Rose + "/shop list buy [page #] - Shows buying list");
 			player.sendMessage(Colors.Rose + "/shop list sell [page #] - Shows selling list");
 
@@ -261,7 +267,9 @@ public class iConomy extends Plugin {
 		} else if (type.equals("sign")) {
 			player.sendMessage(Colors.Rose + "iConomy [Sign Shop] v" + this.ssversion + " - by Nijikokun & Graniz");
 			player.sendMessage(Colors.Rose + "---------------");
-			player.sendMessage(Colors.Rose + "/sign stock - Check your sign stock");
+			player.sendMessage(Colors.Rose + "/sign - Check your sign stock");
+			player.sendMessage(Colors.Rose + "/sign stock <item> <amount> - Add stock to an item");
+			player.sendMessage(Colors.Rose + "/sign empty <item> - Empty sign stock for item");
 			player.sendMessage(Colors.Rose + "/sign ? - help documentation");
 		}
 	}
@@ -284,6 +292,7 @@ public class iConomy extends Plugin {
 		// Switches
 		this.mysql = this.settings.getBoolean("use-mysql", false);
 		this.globalShop = this.settings.getBoolean("use-shop", true);
+		this.globalStock = this.settings.getBoolean("use-stock", true);
 		this.globalAuction = this.settings.getBoolean("use-auction", true);
 		this.globalLottery = this.settings.getBoolean("use-lottery", true);
 		this.globalSigns = this.settings.getBoolean("use-signs", true);
@@ -332,6 +341,7 @@ public class iConomy extends Plugin {
 		this.canSign = this.settings.getString("can-make-sign-shops", "*");
 		this.canSignBuy = this.settings.getString("can-sign-shop-buy", "*");
 		this.canSignSell = this.settings.getString("can-sign-shop-sell", "*");
+		this.canTrade = this.settings.getString("can-trade", "*");
 
 		// Buying / Selling logging
 		this.logPay = this.settings.getBoolean("log-pay", false);
@@ -373,16 +383,22 @@ public class iConomy extends Plugin {
 		this.signSold = this.settings.getString("sign-player-sold","You sold %d %s giving you %s");
 		this.signStocked = this.settings.getString("sign-owner-stock", "%d %s has been put into stock!");
 		this.signNotEnough = this.settings.getString("sign-owner-not-enough-stock", "%s doesn't have enough %s left in stock!");
-		this.signNotInStock = this.settings.getString("sign-owner-no-stock", "%s doesn't that in stock!");
+		this.signNotInStock = this.settings.getString("sign-owner-no-stock", "%s doesn't have that in stock!");
+		this.signNotInStocky = this.settings.getString("sign-you-no-stock", "%s don't have that in stock!");
 		this.signBoughtAmount = this.settings.getString("sign-bought-amount","You bought %d of %s, it cost you %s");
 		this.signLeftAmount = this.settings.getString("sign-amount-left", "You now have %d left of %s in your stock.");
 		this.signNotEnoughp = this.settings.getString("sign-not-enough-player", "You don't have enough %s to do that!");
 		this.signInvalid = this.settings.getString("sign-invalid", "Shop no longer exists, resetting text!");
+		this.signNoExists = this.settings.getString("sign-non-existant", "You don't have a sign with that item.");
+
+		// To be added
+		//this.signUpgraded = this.settings.getString("sign-upgraded", "Successfully upgraded sign shop! You can now use %s signs");
 
 		// Shop Data
 		this.auctions = new iProperty(directory + "auction.properties");
 		this.auctioner = new iProperty(directory + "auctioner.properties");
-		
+		this.trades = new iProperty(directory + "trading.properties");
+
 		if(!this.mysql) {
 			this.buying = new iProperty(directory + "buying.properties");
 			this.selling = new iProperty(directory + "selling.properties");
@@ -397,13 +413,13 @@ public class iConomy extends Plugin {
 				log.severe("[iConomy Lottery] Error: " + ex);
 			}
 		}
-		
+
 		// MySQL
 		this.driver = this.settings.getString("driver", "com.mysql.jdbc.Driver");
 		this.user = this.settings.getString("user", "root");
 		this.pass = this.settings.getString("pass", "root");
 		this.db = this.settings.getString("db", "jdbc:mysql://localhost:3306/minecraft");
-		
+
 		// Data
 		this.data = new iData(this.mysql, this.startingBalance, this.driver, this.user, this.pass, this.db);
 
@@ -1463,7 +1479,7 @@ public class iConomy extends Plugin {
 
 			if(player2 != null)
 				player2.sendMessage(Colors.Green + pdata1 + Colors.LightGray + " has sent you " + Colors.Green + amount + this.moneyName);
-			
+
 			// Log
 			this.shopLog("pay", pdata1 + "|"+pdata2+"|1|200|" + amount);
 
@@ -1713,7 +1729,7 @@ public class iConomy extends Plugin {
 			if (i < 1) { this.p.endAuction(); }
 		    }
 		}, 0L, 1000);
-		
+
 		return true;
 	}
 
@@ -1847,7 +1863,7 @@ public class iConomy extends Plugin {
 
 					auctioner.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.LightGray + "Auction Over!");
 					auctioner.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + this.auctionCurAmount + this.moneyName + Colors.LightGray + " has been credited to your account!");
-					
+
 					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.LightGray + "You Won! ");
 					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + this.auctionCurAmount + this.moneyName + Colors.LightGray + " has been debited from your account!");
 					player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + "Enjoy your item(s)!");
@@ -1876,7 +1892,7 @@ public class iConomy extends Plugin {
 				player.giveItem(this.auctionItem, this.auctionAmount);
 				player.sendMessage(Colors.White +"["+ Colors.Gold +"Auction"+ Colors.White +"] "+Colors.Green + "Item(s) have been returned to you!");
 			}
-			
+
 
 			if(debugging)
 				log.info("[iConomy Debugging] [" + player + "] ["+this.auctionCurName+"] ["+this.auctionItem+"] ["+this.auctionAmount+"] ["+this.auctionCurAmount+"] ["+this.auctionCurBidCount+"] ["+this.auctionCurBid+"] ["+this.auctionCurSecretBid+"] [#20354]");
@@ -1901,11 +1917,11 @@ public class iConomy extends Plugin {
 	public boolean wonAuction(String name) {
 		return this.auctions.keyExists(name);
 	}
-	
+
 	public boolean realAuction(String name) {
 		return this.auctions.getString(name).contains(",");
 	}
-	
+
 	public String[] parseAuction(String name) {
 		String pauction = this.auctions.getString(name);
 		return pauction.split(",");
@@ -2097,7 +2113,7 @@ public class iConomy extends Plugin {
 
 			try {
 				conn = this.data.MySQL();
-				ps = conn.prepareStatement("SELECT * FROM iSignOwners WHERE owner=? LIMIT 1");
+				ps = conn.prepareStatement("SELECT usable FROM iSignOwners WHERE owner=? LIMIT 1");
 				ps.setString(1, name);
 				rs = ps.executeQuery();
 
@@ -2159,15 +2175,11 @@ public class iConomy extends Plugin {
 
 			try {
 				conn = this.data.MySQL();
-				ps = conn.prepareStatement("SELECT * FROM iSignOwners WHERE owner=? LIMIT 1");
+				ps = conn.prepareStatement("SELECT usable FROM iSignOwners WHERE owner=? LIMIT 1");
 				ps.setString(1, name);
 				rs = ps.executeQuery();
 
-				if(rs.next()) {
-					return rs.getInt("usable");
-				} else {
-					return this.signOwnAmount;
-				}
+				return (rs.next()) ? rs.getInt("usable") : this.signOwnAmount;
 			} catch (Exception ex) {
 				log.log(Level.SEVERE, "[iConomy] Listing failed for buying list", ex);
 			} finally {
@@ -2178,11 +2190,7 @@ public class iConomy extends Plugin {
 				} catch (SQLException ex) { }
 			}
 		} else {
-			if(this.signOwners.getInt(name) != 0)
-				return this.signOwners.getInt(name);
-			else {
-				return this.signOwnAmount;
-			}
+			return (this.signOwners.getInt(name) != 0) ? this.signOwners.getInt(name) : this.signOwnAmount;
 		}
 
 		return 0;
@@ -2196,7 +2204,7 @@ public class iConomy extends Plugin {
 
 			try {
 				conn = this.data.MySQL();
-				ps = conn.prepareStatement("SELECT * FROM iSign WHERE owner=? ORDER BY item ASC");
+				ps = conn.prepareStatement("SELECT item,amount FROM iSign WHERE owner=? ORDER BY item ASC");
 				ps.setString(1, player.getName());
 				rs = ps.executeQuery();
 
@@ -2246,7 +2254,7 @@ public class iConomy extends Plugin {
 
 			try {
 				conn = this.data.MySQL();
-				ps = conn.prepareStatement("SELECT * FROM iSign WHERE owner=? AND item=? LIMIT 1");
+				ps = conn.prepareStatement("SELECT amount FROM iSign WHERE owner=? AND item=? LIMIT 1");
 				ps.setString(1, name);
 				ps.setInt(2, i);
 				rs = ps.executeQuery();
@@ -2268,8 +2276,7 @@ public class iConomy extends Plugin {
 				} catch (SQLException ex) { }
 			}
 		} else {
-			int shop = this.sign.getInt(name+"-"+i);
-			return shop;
+			return this.sign.getInt(name+"-"+i);
 		}
 
 		return 0;
@@ -2285,7 +2292,7 @@ public class iConomy extends Plugin {
 
 			try {
 				conn = this.data.MySQL();
-				ps = conn.prepareStatement("SELECT * FROM iSign WHERE owner=?");
+				ps = conn.prepareStatement("SELECT owner FROM iSign WHERE owner=?");
 				ps.setString(1, name);
 				rs = ps.executeQuery();
 
@@ -2393,7 +2400,7 @@ public class iConomy extends Plugin {
 
 			try {
 				conn = this.data.MySQL();
-				ps = conn.prepareStatement("SELECT * FROM iSign WHERE owner=? AND item=? LIMIT 1");
+				ps = conn.prepareStatement("SELECT id FROM iSign WHERE owner=? AND item=? LIMIT 1");
 				ps.setString(1, name);
 				ps.setInt(2, i);
 				rs = ps.executeQuery();
@@ -2409,11 +2416,7 @@ public class iConomy extends Plugin {
 				} catch (SQLException ex) { }
 			}
 		} else {
-			if(this.sign.getString(name+"-"+i).isEmpty())
-				return false;
-			else {
-				return true;
-			}
+			return (this.sign.getString(name+"-"+i).isEmpty()) ? false : true;
 		}
 
 		return false;
@@ -2429,7 +2432,7 @@ public class iConomy extends Plugin {
 				conn = this.data.MySQL();
 
 				if(!this.existsSign(name, i)) {
-					ps = conn.prepareStatement("INSERT INTO iSign (owner,item,amount) VALUES(?,?,?)");
+					ps = conn.prepareStatement("INSERT IGNORE INTO iSign (owner,item,amount) VALUES(?,?,?)");
 					ps.setString(1, name);
 					ps.setInt(2, i);
 					ps.setInt(3, s);
@@ -2437,12 +2440,12 @@ public class iConomy extends Plugin {
 				}
 
 				if(this.signOwnUse)
-					ps = conn.prepareStatement("INSERT INTO iSignOwners(owner,usable) VALUES(?,?) ON duplicate KEY IGNORE");
+					ps = conn.prepareStatement("INSERT IGNORE INTO iSignOwners(owner,usable) VALUES(?,?)");
 					ps.setString(1, name);
 					ps.setInt(2, this.signOwnAmount);
 					ps.executeUpdate();
 
-				ps = conn.prepareStatement("INSERT INTO iSignLocation (owner,item,x,y,z) VALUES(?,?,?,?,?,?,?)");
+				ps = conn.prepareStatement("INSERT INTO iSignLocation (owner,item,x,y,z) VALUES(?,?,?,?,?)");
 				ps.setString(1, name);
 				ps.setInt(2, i);
 				ps.setInt(3, x);
@@ -2459,7 +2462,8 @@ public class iConomy extends Plugin {
 				} catch (SQLException ex) { }
 			}
 		} else {
-			this.sign.setInt(name+"-"+i, s);
+			if(this.sign.getInt(name+"-"+i) == 0 || this.sign.getInt(name+"-"+i) == s)
+				this.sign.setInt(name+"-"+i, s);
 
 			if(this.signOwners.getString(name) == null ? "" == null : this.signOwners.getString(name).equals("") && this.signOwnUse)
 				this.signOwners.setInt(name, this.signOwnAmount);
@@ -2486,7 +2490,7 @@ public class iConomy extends Plugin {
 		} else {
 			if(this.existsSign(owner, i)) {
 				this.updateSign(owner, i, amount+stock);
-			} else { 
+			} else {
 				this.setSign(owner, blockClicked.getX(), blockClicked.getY(), blockClicked.getZ(), i, amount+stock);
 			}
 
@@ -2505,7 +2509,7 @@ public class iConomy extends Plugin {
 
 	}
 
-	public void signPull(Player player, String owner, int i, int amount, boolean isOwner, int price, Block blockClicked) {
+	public void signPull(Player player, String owner, int i, int amount, boolean isOwner, int price) {
 		int stock = signCurStock(owner, i);
 		if(stock != 0) {
 			if (amount <= stock) {
@@ -2549,22 +2553,29 @@ public class iConomy extends Plugin {
 				rs = ps.executeQuery();
 
 				while(rs.next()) {
-					if(this.updateSignLocation(rs.getInt("x"), rs.getInt("y"), rs.getInt("z"), 0, 1, 0, i, stock))
+					if(debugging)
+						log.info("[iConomy Debugging] "+ rs.getInt("x") + " - "+ rs.getInt("y") + " - "+ rs.getInt("z"));
+
+					int x = rs.getInt("x");
+					int y = rs.getInt("y");
+					int z = rs.getInt("z");
+
+					if(this.updateSignLocation(x, y, z, 0, 1, 0, i, stock))
 						continue;
 
-					if(this.updateSignLocation(rs.getInt("x"), rs.getInt("y"), rs.getInt("z"), 0, -1, 0, i, stock))
+					if(this.updateSignLocation(x, y, z, 0, -1, 0, i, stock))
 						continue;
 
-					if(this.updateSignLocation(rs.getInt("x"), rs.getInt("y"), rs.getInt("z"), 1, 0, 0, i, stock))
+					if(this.updateSignLocation(x, y, z, 1, 0, 0, i, stock))
 						continue;
 
-					if(this.updateSignLocation(rs.getInt("x"), rs.getInt("y"), rs.getInt("z"), -1, 0, 0, i, stock))
+					if(this.updateSignLocation(x, y, z, -1, 0, 0, i, stock))
 						continue;
 
-					if(this.updateSignLocation(rs.getInt("x"), rs.getInt("y"), rs.getInt("z"), 0, 0, 1, i, stock))
+					if(this.updateSignLocation(x, y, z, 0, 0, 1, i, stock))
 						continue;
 
-					if(this.updateSignLocation(rs.getInt("x"), rs.getInt("y"), rs.getInt("z"), 0, 0, -1, i, stock))
+					if(this.updateSignLocation(x, y, z, 0, 0, -1, i, stock))
 						continue;
 				}
 			} catch (SQLException ex) {
@@ -2712,6 +2723,8 @@ public class iConomy extends Plugin {
 			return this.canDo(this.canSignBuy, player);
 		} else if (command.equals("signSell")) {
 			return this.canDo(this.canSignSell, player);
+		} else if (command.equals("trade")) {
+			return this.canDo(this.canTrade, player);
 		}
 
 		return false;
@@ -3537,11 +3550,98 @@ public class iConomy extends Plugin {
 			 *	/sign - Displays your current stock!
 			 */
 			if (split[0].equalsIgnoreCase("/sign") && p.globalSigns) {
-				if(p.signOwnUse)
-					player.sendMessage("You currently own " + p.ownSign(player.getName()) + " out of " + p.canOwn(player.getName()) + " possible shops.");
+				if ((split.length < 2)) {
+					if(p.signOwnUse)
+						player.sendMessage("You currently own " + p.ownSign(player.getName()) + " out of " + p.canOwn(player.getName()) + " possible shops.");
 
-				p.signStock(player);
-				return true;
+					p.signStock(player);
+					return true;
+				}
+				// Level 2
+				if ((split.length < 3)) {
+					if (split[1].equalsIgnoreCase("upgrade") || split[1].equalsIgnoreCase("-u")) {
+						p.upgradeOwn(player.getName()); return true;
+					}
+					if (split[1].equalsIgnoreCase("?") || split[1].equalsIgnoreCase("help")) {
+						p.halp(player, "sign");
+						return true;
+					}
+				}
+				// Level 3
+				if ((split.length < 4)) {
+					if (split[1].equalsIgnoreCase("stock") || split[1].equalsIgnoreCase("-s")) {
+						player.sendMessage(Colors.Rose + "Usage: /sign stock <item> <amount>");
+						player.sendMessage(Colors.Rose + "Alt-Commands: -s");
+						return true;
+					}
+
+					if (split[1].equalsIgnoreCase("empty") || split[1].equalsIgnoreCase("-e")) {
+						int itemID = 0;
+
+						try {
+							itemID = Integer.parseInt(split[2]);
+						} catch (NumberFormatException n) {
+							itemID = etc.getDataSource().getItem(split[2]);
+						}
+
+						if (!Item.isValidItem(itemID)) {
+							if(p.items.getKey(split[2]) != null) {
+								itemID = Integer.parseInt(p.items.getKey(split[2]).toString()); return true;
+							} else {
+								player.sendMessage(p.signInvalidItem); return true;
+							}
+						}
+
+						if(p.existsSign(player.getName(), itemID)) {
+							int curStock = p.signCurStock(player.getName(), itemID);
+							p.signPull(player, player.getName(), itemID, curStock, true, 0); return true;
+						} else {
+							player.sendMessage(p.signNoExists); return true;
+						}
+					}
+
+					if (split[1].equalsIgnoreCase("?") || split[1].equalsIgnoreCase("help")) {
+						p.halp(player, "sign");
+						return true;
+					}
+				}
+
+				// Level 3
+				if ((split.length < 5)) {
+					if (split[1].equalsIgnoreCase("stock") || split[1].equalsIgnoreCase("-s")) {
+						int itemID = 0;
+						int amount = 0;
+
+						try {
+							itemID = Integer.parseInt(split[2]);
+						} catch (NumberFormatException n) {
+							itemID = etc.getDataSource().getItem(split[2]);
+						}
+
+						if (!Item.isValidItem(itemID)) {
+							if(p.items.getKey(split[2]) != null) {
+								itemID = Integer.parseInt(p.items.getKey(split[2]).toString()); return true;
+							} else {
+								player.sendMessage(p.signInvalidItem); return true;
+							}
+						}
+
+						try {
+							amount = Integer.parseInt(split[3]);
+						} catch (NumberFormatException n) { }
+
+						if(p.existsSign(player.getName(), itemID) && amount > 0) {
+							p.signPush(player, player.getName(), itemID, amount, true, 0, null); return true;
+						} else {
+							player.sendMessage(p.signNoExists); return true;
+						}
+					}
+
+					if (split[1].equalsIgnoreCase("?") || split[1].equalsIgnoreCase("help")) {
+						p.halp(player, "sign");
+						return true;
+					}
+				}
 			}
 
 			/*
@@ -3946,7 +4046,7 @@ public class iConomy extends Plugin {
 			if(!p.globalSigns)
 				return false;
 
-			if (!p.can(player, "sign")) {
+			if (!p.can(player, "sign") || !p.can(player, "trade")) {
 				return false;
 			}
 
@@ -3956,6 +4056,15 @@ public class iConomy extends Plugin {
 
 			Sign sign = (Sign) block;
 
+			// Trading
+			if(sign.getText(1).equalsIgnoreCase("[trade]")) {
+				sign.setText(2, "Setup Chest");
+				sign.setText(3, "Reclick Sign");
+				sign.update();
+				return false;
+			}
+
+			// Selling / Buying
 			if (!(sign.getText(1).equalsIgnoreCase("sell") || sign.getText(1).equalsIgnoreCase("buy"))) {
 				return false;
 			}
@@ -4031,7 +4140,7 @@ public class iConomy extends Plugin {
 			if(!p.globalSigns)
 				return false;
 
-			if (!p.can(player, "signBuy") || !p.can(player, "signSell")) {
+			if (!p.can(player, "signBuy") || !p.can(player, "signSell") || !p.can(player, "trade")) {
 				return false;
 			}
 
@@ -4042,9 +4151,138 @@ public class iConomy extends Plugin {
 			} else {
 				Sign sign = (Sign) theblock;
 
+				// Trading
+				if(sign.getText(1).equalsIgnoreCase("[trade]")) {
+					Chest chest = null;
+					Item item = null;
+					Map traders = null;
+
+					String name = "";
+					int amount = 0, give = 0, toGive = 0, itemId = 0, remainder = 0, factor = 0, items = 0, i = 0;
+					int x, y, z;
+
+					//Coordinates of the sign
+					x = blockClicked.getX();
+					y = blockClicked.getY();
+					z = blockClicked.getZ();
+
+					ComplexBlock theOBlock = etc.getServer().getComplexBlock(x,y-1,z);
+
+					if(theOBlock instanceof Chest)
+						chest = (Chest) etc.getServer().getComplexBlock(x, y-1, z);
+
+					//Is there something in the first slot?
+					if (chest.getEmptySlot() != 0 ) {
+						item = chest.getItemFromSlot(0);
+						amount = item.getAmount();
+
+						factor = 0;
+						items = 0;
+						i = 1;
+
+						try {
+							traders = p.trades.returnMap();
+						} catch (Exception ex) {
+							log.info("[iConomy] Mapping failed for trades"); return false;
+						}
+
+						for (Object key: traders.keySet()) {
+							String data = (String) traders.get(key);
+							String tradeData[] = data.split(",");
+
+							if(Integer.parseInt(tradeData[0]) == item.getItemId()) {
+								factor = Integer.parseInt(tradeData[1]);
+								name = (String) key;
+								toGive = Integer.parseInt(tradeData[2]);
+
+								if(tradeData.length == 4)
+									itemId = Integer.parseInt(tradeData[3]);
+
+								items = i;
+								break;
+							}
+
+							i++;
+						}
+
+						player.sendMessage("§6[Trade]§f Trading: " + name + " - Amount: " + amount + ".");
+
+						//Calculates the amount of gold (or the currency) to give the player
+						if (factor != 0) {
+							if (amount >= factor) {
+								give = amount / factor;
+								remainder = amount % factor;
+
+								//Send the "money" to the player
+								if(itemId != 0)
+									player.giveItem(itemId, give * toGive);
+								else {
+									p.deposit(null, player.getName(), give * toGive, true);
+								}
+
+								//Removes the content's of the chest and add the remainder, if any
+								item.setAmount(remainder);
+								chest.removeItem(0);
+								chest.addItem(item);
+
+								//Let you and everybody know what happened...
+								if(itemId != 0)
+									player.sendMessage("§6[Trade]§f You received " + (give * toGive) + " " + p.itemName(cInt(itemId)) + ".");
+								else {
+									player.sendMessage("§6[Trade]§f You received " + (give * toGive) + p.moneyName + ".");
+								}
+
+								player.sendMessage("§6[Trade]§f There are " + remainder + " " + name + " left in the chest.");
+								if(itemId != 0)
+									p.broadcast("§6[Trade] " + player.getName() + " got " + (give * toGive) + " " + p.itemName(cInt(itemId)) + " from trade.");
+								else {
+									p.broadcast("§6[Trade] " + player.getName() + " got " + (give * toGive) + p.moneyName + " from trade.");
+								}
+							} else {
+								player.sendMessage("§6[Trade]§f Not enough items (" + amount + "/" + factor + ") for trade.");
+							}
+						} else {
+							player.sendMessage("§6[Trade]§f This item cannot be used for trade.");
+						}
+
+						//Update the chest content
+						chest.update();
+					} else {
+						player.sendMessage("§6[Trade]§f Add the items into the first slot.");
+					}
+
+					return false;
+				}
+
+				// Trade Recursive Information~
+				if((sign.getText(1).equalsIgnoreCase("[rates]"))) {
+					Map traders;
+					player.sendMessage("§6[Trade]§f Trading rates are currently:");
+
+					try {
+						traders = p.trades.returnMap();
+					} catch (Exception ex) {
+						log.info("[iConomy] Mapping failed for trades"); return false;
+					}
+
+					for (Object key: traders.keySet()) {
+						String data = (String) traders.get(key);
+						String tradeData[] = data.split(",");
+
+						if(tradeData.length == 4)
+							player.sendMessage("    §6-§f " + tradeData[1] + "x " + (String) key + " for " + tradeData[2] + " " + p.itemName(tradeData[3]));
+						else {
+							player.sendMessage("    §6-§f " + tradeData[1] + "x " + (String) key + " for " + tradeData[2] + p.moneyName);
+						}
+					}
+				}
+
+				// Selling / Buying
 				if (!(sign.getText(1).equalsIgnoreCase("sell") || sign.getText(1).equalsIgnoreCase("buy"))) {
 					return false;
 				}
+
+				player.addGroup("groupname");
 
 
 				if (!p.waitedEnough(player.getName())) {
@@ -4080,11 +4318,11 @@ public class iConomy extends Plugin {
 						p.signPush(player, sign.getText(0), i, amount, true, 0, blockClicked);
 					} else {
 						if(curStock < 1) {
-							player.sendMessage(String.format(p.signNotInStock, "You", p.itemName(cInt(i))));
+							player.sendMessage(String.format(p.signNotInStocky, "You", p.itemName(cInt(i))));
 							return false;
 						}
 
-						p.signPull(player, sign.getText(0), i, amount, true, 0, blockClicked);
+						p.signPull(player, sign.getText(0), i, amount, true, 0);
 					}
 				} else {
 					if (sign.getText(1).equalsIgnoreCase("sell")) {
@@ -4105,7 +4343,7 @@ public class iConomy extends Plugin {
 								return false;
 							}
 
-							p.signPull(player, sign.getText(0), i, amount, false, price, blockClicked);
+							p.signPull(player, sign.getText(0), i, amount, false, price);
 						}
 					}
 
