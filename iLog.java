@@ -8,13 +8,13 @@ import java.util.logging.Logger;
  * iLog
  *	Controls logging of all input/output data for iConomy to be parsed
  *
- * @date 11/17/2010 7:33PM
+ * @date 11/17/2010 9:08PM
  * @author Nijiko
  * @copyright CC Nijikokun / DarkGrave, Aslyum Corporation LLC
  */
 public class iLog {
 	static final Logger log = Logger.getLogger("Minecraft");
-	private iConomy p;
+	private iConomy p = iConomy.getInstance();
 
 	public static String logDate() {
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

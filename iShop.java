@@ -11,16 +11,16 @@ import java.util.logging.Logger;
  * iShop
  *	Controls global shop system
  *
- * @date 11/17/2010 8:34PM
+ * @date 11/17/2010 9:08PM
  * @author Nijiko
  * @copyright CC Nijikokun / DarkGrave, Aslyum Corporation LLC
  */
 public class iShop {
 	static final Logger log = Logger.getLogger("Minecraft");
-	private iConomy p;
-	private iLog l;
-	private iMisc m;
-	private iMoney mo;
+	private iConomy p = iConomy.getInstance();
+	private iLog l = new iLog();
+	private iMisc m = new iMisc();
+	private iMoney mo = new iMoney();
 
 	public int itemNeedsAmount(String type, String itemId) {
 		if (p.mysql) {

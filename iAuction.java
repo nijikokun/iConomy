@@ -6,16 +6,16 @@ import java.util.logging.Logger;
  * iAuction
  *	Controls auction system
  *
- * @date 11/17/2010 8:34PM
+ * @date 11/17/2010 9:08PM
  * @author Nijiko
  * @copyright CC Nijikokun / DarkGrave, Aslyum Corporation LLC
  */
 public class iAuction {
 	static final Logger log = Logger.getLogger("Minecraft");
-	private iConomy p;
-	private iLog l;
-	private iMisc m;
-	private iMoney mo;
+	private iConomy p = iConomy.getInstance();
+	private iLog l = new iLog();
+	private iMisc m = new iMisc();
+	private iMoney mo = new iMoney();
 
 	public boolean startAuction(Player player, int inter, int itemId, int itemAmount, int startingBid, int minBid, int maxBid) {
 		Inventory bag = player.getInventory();

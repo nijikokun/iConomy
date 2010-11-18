@@ -11,15 +11,15 @@ import java.util.logging.Logger;
  */
 public class iListen extends PluginListener {
 	static final Logger log = Logger.getLogger("Minecraft");
-	private iConomy p;
-	private iCan c;
-	private iHelp h;
-	private iMisc m;
-	private iShop s;
-	private iSign ss;
-	private iMoney mo;
-	private iAuction a;
-	private iLottery lo;
+	private iConomy p = iConomy.getInstance();
+	private iCan c = new iCan();
+	private iHelp h = new iHelp();
+	private iMisc m = new iMisc();
+	private iShop s = new iShop();
+	private iSign ss = new iSign();
+	private iMoney mo = new iMoney();
+	private iAuction a = new iAuction();
+	private iLottery lo = new iLottery();
 
 	public void onLogin(Player player) {
 		if(a.wonAuction(player.getName())) {

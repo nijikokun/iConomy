@@ -2,12 +2,12 @@
  * iMisc
  *	Miscellaneous functions that are used commonly throughout iConomy
  *
- * @date 11/17/2010 7:08PM
+ * @date 11/17/2010 9:08PM
  * @author Nijiko
  * @copyright CC Nijikokun / DarkGrave, Aslyum Corporation LLC
  */
 public class iMisc {
-	private iConomy p;
+	private iConomy p = iConomy.getInstance();
 
 	public String itemName(String id) {
 		String name = (String) p.items.get(id);

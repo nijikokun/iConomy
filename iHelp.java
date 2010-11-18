@@ -7,8 +7,8 @@
  * @copyright CC Nijikokun / DarkGrave, Aslyum Corporation LLC
  */
 public final class iHelp extends iConomy {
-	iConomy p;
-	iCan c;
+	private iConomy p = iConomy.getInstance();
+	private iCan c = new iCan();
 
 	public void help(Player player, String type) {
 		if (type.equals("money")) {

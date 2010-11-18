@@ -12,9 +12,9 @@ import java.util.logging.Logger;
  */
 public class iMoney {
 	static final Logger log = Logger.getLogger("Minecraft");
-	private iConomy p;
-	private iMisc m;
-	private iLog l;
+	private iConomy p = iConomy.getInstance();
+	private iMisc m = new iMisc();
+	private iLog l = new iLog();
 
 	// Money Name
 	public String name = p.moneyName;

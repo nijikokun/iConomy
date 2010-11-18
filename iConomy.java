@@ -147,7 +147,14 @@ public class iConomy extends Plugin {
 			etc.getInstance().addCommand("/sign", "? - For more information");
 	}
 
+	private static iConomy instance;
+
+	public static iConomy getInstance() {
+		return instance;
+	}
+
 	public void initialize() {
+		instance = this;
 		etc.getLoader().addListener(PluginLoader.Hook.COMMAND, l, this, PluginListener.Priority.MEDIUM);
 		etc.getLoader().addListener(PluginLoader.Hook.LOGIN, l, this, PluginListener.Priority.LOW);
 		etc.getLoader().addListener(PluginLoader.Hook.BLOCK_CREATED, l, this, PluginListener.Priority.HIGH);

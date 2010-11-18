@@ -10,15 +10,15 @@ import java.util.logging.Logger;
  * iSign
  *	Controls sign shops access
  *
- * @date 11/17/2010 7:33PM
+ * @date 11/17/2010 9:08PM
  * @author Nijiko
  * @copyright CC Nijikokun / DarkGrave, Aslyum Corporation LLC
  */
 public class iSign {
 	static final Logger log = Logger.getLogger("Minecraft");
-	private iConomy p;
-	private iMisc m;
-	private iMoney mo;
+	private iConomy p = iConomy.getInstance();
+	private iMisc m = new iMisc();
+	private iMoney mo = new iMoney();
 
 	public void updateClick(String name) {
 		p.lastClick.put(name, System.currentTimeMillis() / 1000L);
