@@ -5,8 +5,8 @@ import java.util.logging.Logger;
 
 public final class iData implements Serializable {
 	protected static final Logger log = Logger.getLogger("Minecraft");
-	public iProperty accounts;
-	private int startingBalance;
+	public static iProperty accounts;
+	private static int startingBalance;
 
 	// Serial
 	private static final long serialVersionUID = -5796481236376288855L;
@@ -22,8 +22,8 @@ public final class iData implements Serializable {
 	static String mainDir = "iConomy/";
 	static String logDir = "logs/";
 
-	public iData(boolean mysql, int balance, String driver, String user, String pass, String db) {
-		this.startingBalance = balance;
+	public static void setup(boolean mysql, int balance, String driver, String user, String pass, String db) {
+		startingBalance = balance;
 
 		// Database
 		iData.driver = driver;
@@ -32,7 +32,7 @@ public final class iData implements Serializable {
 		iData.db = db;
 
 		if (!mysql) {
-			this.accounts = new iProperty(mainDir + "balances.properties");
+			accounts = new iProperty(mainDir + "balances.properties");
 		} else {
 			// MySQL
 			iData.mysql = true;
@@ -45,7 +45,7 @@ public final class iData implements Serializable {
 		}
 	}
 
-	public Connection MySQL() {
+	public static Connection MySQL() {
 		try {
 			return DriverManager.getConnection(db,user,pass);
 		} catch (SQLException ex) {
@@ -55,7 +55,7 @@ public final class iData implements Serializable {
 		return null;
 	}
 
-	public int globalBalance() {
+	public static int globalBalance() {
 		Connection conn = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
@@ -85,7 +85,7 @@ public final class iData implements Serializable {
 			Map balances;
 
 			try {
-				balances = this.accounts.returnMap();
+				balances = accounts.returnMap();
 			} catch (Exception ex) {
 				log.info("[iConomy] Listing failed for accounts.");
 				return 0;
@@ -100,7 +100,7 @@ public final class iData implements Serializable {
 		}
 	}
 
-	public boolean hasBalance(String playerName) {
+	public static boolean hasBalance(String playerName) {
 		Connection conn = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
@@ -124,17 +124,17 @@ public final class iData implements Serializable {
 				} catch (SQLException ex) { }
 			}
 		} else {
-			return (this.accounts.getInt(playerName) != 0) ? true : false;
+			return (accounts.getInt(playerName) != 0) ? true : false;
 		}
 
 		return has;
 	}
 
-	public int getBalance(String playerName) {
+	public static int getBalance(String playerName) {
 		Connection conn = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
-		int balance = this.startingBalance;
+		int balance = startingBalance;
 
 		if (mysql) {
 			try {
@@ -161,13 +161,13 @@ public final class iData implements Serializable {
 				} catch (SQLException ex) { }
 			}
 		} else {
-			return (this.hasBalance(playerName)) ? this.accounts.getInt(playerName) : this.accounts.getInt(playerName, this.startingBalance);
+			return (hasBalance(playerName)) ? accounts.getInt(playerName) : accounts.getInt(playerName, startingBalance);
 		}
 
 		return balance;
 	}
 
-	public void setBalance(String playerName, int balance) {
+	public static void setBalance(String playerName, int balance) {
 		Connection conn = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
@@ -197,7 +197,7 @@ public final class iData implements Serializable {
 				} catch (SQLException ex) { }
 			}
 		} else {
-			this.accounts.setInt(playerName, balance);
+			accounts.setInt(playerName, balance);
 		}
 	}
 }

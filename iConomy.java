@@ -40,7 +40,7 @@ public class iConomy extends Plugin {
 	public static BidiMap items = new TreeBidiMap();
 
 	// Data Control
-	public iData data;
+	//public iData data;
 
 	// Money Timer Settings
 	private Timer mTime1, mTime2;
@@ -112,7 +112,7 @@ public class iConomy extends Plugin {
 
 	public iConomy() {
 		this.settings = null;
-		this.data = null;
+		//iData = null;
 		this.mTime1 = null;
 		this.mTime2 = null;
 		this.auctionTimer = null;
@@ -426,8 +426,8 @@ public class iConomy extends Plugin {
 		this.db = this.settings.getString("db", "jdbc:mysql://localhost:3306/minecraft");
 
 		// Data
-		this.data = new iData(this.mysql, this.startingBalance, this.driver, this.user, this.pass, this.db);
-
+		//iData = new iData(this.mysql, this.startingBalance, this.driver, this.user, this.pass, this.db);
+		iData.setup(this.mysql, this.startingBalance, this.driver, this.user, this.pass, this.db);
 		// Buying
 		items.put("1", "stone");
 		items.put("2", "grass");
@@ -696,7 +696,7 @@ public class iConomy extends Plugin {
 	}
 
 	private boolean canAfford(String name, int cost) {
-		return (cost <= this.data.getBalance(name)) ? true : false;
+		return (cost <= iData.getBalance(name)) ? true : false;
 	}
 
 	private Player getPlayer(String name) {
@@ -772,7 +772,7 @@ public class iConomy extends Plugin {
 			int cost = 0;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				if(type.equals("buy")) {
 					ps = conn.prepareStatement("SELECT cost,perbundle FROM iBuy WHERE id = ? LIMIT 1");
 				} else {
@@ -860,7 +860,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				if(type.equals("buy")) {
 					ps = conn.prepareStatement("SELECT cost,perbundle FROM iBuy WHERE id = ? LIMIT 1");
 				} else {
@@ -943,7 +943,7 @@ public class iConomy extends Plugin {
 		int i = 0;
 
 		try {
-			conn = this.data.MySQL();
+			conn = iData.MySQL();
 
 			if(table.equalsIgnoreCase("ibuy")){
 				ps = conn.prepareStatement("SELECT * FROM iBuy");
@@ -988,7 +988,7 @@ public class iConomy extends Plugin {
 			int process = amount+10;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("SELECT id,cost,perbundle FROM iSell ORDER BY cost ASC");
 				rs = ps.executeQuery();
 
@@ -1117,7 +1117,7 @@ public class iConomy extends Plugin {
 			int process = amount+10;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("SELECT id,cost,perbundle FROM iBuy ORDER BY cost ASC");
 				rs = ps.executeQuery();
 
@@ -1229,7 +1229,7 @@ public class iConomy extends Plugin {
 		int itemAmount = this.itemCost("buy", cInt(itemId), amount, false);
 		int needsAmount = this.itemNeedsAmount("buy", cInt(itemId));
 
-		if(this.data.getBalance(player.getName()) < itemAmount){
+		if(iData.getBalance(player.getName()) < itemAmount){
 			player.sendMessage(Colors.Rose + this.buyNotEnough);
 			log.info("[iConomy Shop] " + "Player " + player.getName() + " attempted to buy more [" + itemId + "] [" + amount + "] than they have in "+this.moneyName+" [" + itemAmount + "].");
 			this.shopLog("buy", player.getName() + "|0|203|" + itemId + "|" + amount + "|" + itemAmount + this.moneyName);
@@ -1253,7 +1253,7 @@ public class iConomy extends Plugin {
 			int total = this.itemCost("buy", cInt(itemId), amount, true);
 			String totalAmount = total + this.moneyName;
 
-			if (this.data.getBalance(player.getName()) < total) {
+			if (iData.getBalance(player.getName()) < total) {
 				player.sendMessage(Colors.Rose + this.buyNotEnough);
 				return true;
 			}
@@ -1367,10 +1367,10 @@ public class iConomy extends Plugin {
 		Player player2 = this.getPlayer(pdata2);
 
 		// Balance
-		int i = this.data.getBalance(pdata2);
+		int i = iData.getBalance(pdata2);
 
 		i += amount;
-		this.data.setBalance(pdata2, i);
+		iData.setBalance(pdata2, i);
 
 		if (really && player2 != null) {
 			player2.sendMessage(Colors.Green + "You received " + amount + this.moneyName);
@@ -1396,14 +1396,14 @@ public class iConomy extends Plugin {
 		Player player2 = this.getPlayer(pdata2);
 
 		// Balance
-		int i = this.data.getBalance(pdata2);
+		int i = iData.getBalance(pdata2);
 
 		if (amount > i) {
 			amount = i;
 		}
 
 		i -= amount;
-		this.data.setBalance(pdata2, i);
+		iData.setBalance(pdata2, i);
 
 		if (really && player2 != null) {
 			player2.sendMessage(Colors.Green + amount + this.moneyName + " was deducted from your account.");
@@ -1428,7 +1428,7 @@ public class iConomy extends Plugin {
 		Player player = this.getPlayer(pdata);
 
 		// Reset
-		this.data.setBalance(pdata, this.startingBalance);
+		iData.setBalance(pdata, this.startingBalance);
 
 		// Notify
 		if (notify) {
@@ -1456,8 +1456,8 @@ public class iConomy extends Plugin {
 		Player player2 = this.getPlayer(pdata2);
 
 		// Balances
-		int i = this.data.getBalance(pdata1);
-		int j = this.data.getBalance(pdata2);
+		int i = iData.getBalance(pdata1);
+		int j = iData.getBalance(pdata2);
 
 		if (pdata1.equals(pdata2)) {
 			if(player1 != null)
@@ -1474,11 +1474,11 @@ public class iConomy extends Plugin {
 		} else {
 			// Update player one balance
 			i -= amount;
-			this.data.setBalance(pdata1, i);
+			iData.setBalance(pdata1, i);
 
 			// Update player two balance
 			j += amount;
-			this.data.setBalance(pdata2, j);
+			iData.setBalance(pdata2, j);
 
 			// Send messages
 			if(player1 != null)
@@ -1507,11 +1507,11 @@ public class iConomy extends Plugin {
 	}
 
 	public int getBalance(Player player) {
-		return this.data.getBalance(player.getName());
+		return iData.getBalance(player.getName());
 	}
 
 	public void showBalance(String name, Player local, boolean isMe) {
-		int i = this.data.getBalance(name);
+		int i = iData.getBalance(name);
 		if (isMe) {
 			Player player = this.getPlayer(name);
 			player.sendMessage(Colors.LightGray + "Balance: " + Colors.Green + i + this.moneyName);
@@ -1530,7 +1530,7 @@ public class iConomy extends Plugin {
 			int i = 1;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("SELECT player,balance FROM iBalances ORDER BY balance DESC");
 				rs = ps.executeQuery();
 
@@ -1562,7 +1562,7 @@ public class iConomy extends Plugin {
 			int i = 1;
 
 			try {
-				accounts = this.data.accounts.returnMap();
+				accounts = iData.accounts.returnMap();
 				bvc =  new ValueComparator(accounts);
 				sorted_accounts = new TreeMap(bvc);
 				sorted_accounts.putAll(accounts);
@@ -1596,7 +1596,7 @@ public class iConomy extends Plugin {
 			int i = 1;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("SELECT player,balance FROM iBalances ORDER BY balance DESC LIMIT 0,?");
 				ps.setInt(1, amount);
 				rs = ps.executeQuery();
@@ -1623,7 +1623,7 @@ public class iConomy extends Plugin {
 			int i = 1;
 
 			try {
-				accounts = this.data.accounts.returnMap();
+				accounts = iData.accounts.returnMap();
 				bvc =  new ValueComparator(accounts);
 				sorted_accounts = new TreeMap(bvc);
 				sorted_accounts.putAll(accounts);
@@ -2005,7 +2005,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("SELECT * FROM `iPrizes` ORDER BY RAND() LIMIT 1");
 				rs = ps.executeQuery();
 
@@ -2044,12 +2044,12 @@ public class iConomy extends Plugin {
 	}
 
 	public void lottery(Player player) {
-		if(this.data.getBalance(player.getName()) < this.ticketCost) {
+		if(iData.getBalance(player.getName()) < this.ticketCost) {
 			player.sendMessage(this.lotteryTag + Colors.Rose + " You do not have enough to purchase a ticket!");
 			player.sendMessage(this.lotteryTag + Colors.Rose + " Ticket cost: "+ this.ticketCost);
 
 			if(debugging)
-				log.info("[iConomy Debugging] [" + player + "] ["+this.data.getBalance(player.getName())+"] [#20358]");
+				log.info("[iConomy Debugging] [" + player + "] ["+iData.getBalance(player.getName())+"] [#20358]");
 
 			 return;
 		} else {
@@ -2088,7 +2088,7 @@ public class iConomy extends Plugin {
 			}
 
 			if(debugging)
-				log.info("[iConomy Debugging] [" + player + "] ["+this.data.getBalance(player.getName())+"] ["+amount+"] ["+amountGiven+"] ["+item+"] ["+percent+"] ["+chance+"] ["+itemName+"] [#20359]");
+				log.info("[iConomy Debugging] [" + player + "] ["+iData.getBalance(player.getName())+"] ["+amount+"] ["+amountGiven+"] ["+item+"] ["+percent+"] ["+chance+"] ["+itemName+"] [#20359]");
 
 		}
 	}
@@ -2119,7 +2119,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("SELECT usable FROM iSignOwners WHERE owner=? LIMIT 1");
 				ps.setString(1, name);
 				rs = ps.executeQuery();
@@ -2128,13 +2128,13 @@ public class iConomy extends Plugin {
 					int currentAmount = rs.getInt("usable");
 					int nextAmount = (currentAmount/this.signOwnAmount)*this.signOwnUpgrade;
 
-					if(this.data.getBalance(name) < nextAmount){
+					if(iData.getBalance(name) < nextAmount){
 						if(player != null)
 							player.sendMessage(String.format(this.signUpgradeAmount, nextAmount + this.moneyName));
 
 					} else {
 						this.debit(null, name, nextAmount, true);
-						conn = this.data.MySQL();
+						conn = iData.MySQL();
 
 						ps = conn.prepareStatement("UPDATE iSignOwners SET usable=usable+? WHERE owner=? LIMIT 1");
 						ps.setInt(1, this.signOwnAmount);
@@ -2163,7 +2163,7 @@ public class iConomy extends Plugin {
 
 			int nextAmount = (currentAmount/this.signOwnAmount)*this.signOwnUpgrade;
 
-			if(this.data.getBalance(name) < nextAmount){
+			if(iData.getBalance(name) < nextAmount){
 				if(player != null)
 					player.sendMessage(String.format(this.signUpgradeAmount, nextAmount + this.moneyName));
 
@@ -2181,7 +2181,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("SELECT usable FROM iSignOwners WHERE owner=? LIMIT 1");
 				ps.setString(1, name);
 				rs = ps.executeQuery();
@@ -2210,7 +2210,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("SELECT item,amount FROM iSign WHERE owner=? ORDER BY item ASC");
 				ps.setString(1, player.getName());
 				rs = ps.executeQuery();
@@ -2260,7 +2260,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("SELECT amount FROM iSign WHERE owner=? AND item=? LIMIT 1");
 				ps.setString(1, name);
 				ps.setInt(2, i);
@@ -2298,7 +2298,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("SELECT owner FROM iSign WHERE owner=?");
 				ps.setString(1, name);
 				rs = ps.executeQuery();
@@ -2350,7 +2350,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("DELETE FROM iSign WHERE owner = ? AND item=? LIMIT 1");
 				ps.setString(1, name); ps.setInt(2, i); ps.executeUpdate();
 
@@ -2378,7 +2378,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("UPDATE iSign SET amount=? WHERE owner=? AND item=? LIMIT 1");
 				ps.setInt(1, s);
 				ps.setString(2, name);
@@ -2406,7 +2406,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("SELECT id FROM iSign WHERE owner=? AND item=? LIMIT 1");
 				ps.setString(1, name);
 				ps.setInt(2, i);
@@ -2436,7 +2436,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 
 				if(!this.existsSign(name, i)) {
 					ps = conn.prepareStatement("INSERT IGNORE INTO iSign (owner,item,amount) VALUES(?,?,?)");
@@ -2553,7 +2553,7 @@ public class iConomy extends Plugin {
 			ResultSet rs = null;
 
 			try {
-				conn = this.data.MySQL();
+				conn = iData.MySQL();
 				ps = conn.prepareStatement("SELECT * FROM iSignLocation WHERE owner=? AND item=?");
 				ps.setString(1, name);
 				ps.setInt(2, i);
@@ -2864,7 +2864,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[1]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -2939,7 +2939,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -2987,7 +2987,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3026,7 +3026,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3065,7 +3065,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3104,7 +3104,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3143,7 +3143,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3200,7 +3200,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
