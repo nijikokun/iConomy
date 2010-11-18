@@ -40,7 +40,7 @@ public class iConomy extends Plugin {
 	public static BidiMap items = new TreeBidiMap();
 
 	// Data Control
-	//public iData data;
+	public iData data = new iData();
 
 	// Money Timer Settings
 	private Timer mTime1, mTime2;
@@ -112,7 +112,7 @@ public class iConomy extends Plugin {
 
 	public iConomy() {
 		this.settings = null;
-		//iData = null;
+		this.data = null;
 		this.mTime1 = null;
 		this.mTime2 = null;
 		this.auctionTimer = null;
@@ -402,7 +402,7 @@ public class iConomy extends Plugin {
 		this.auctions = new iProperty(directory + "auction.properties");
 		this.auctioner = new iProperty(directory + "auctioner.properties");
 		this.trades = new iProperty(directory + "trading.properties");
-		this.stocks = new iProperty(directory + "stock.properties");
+		//this.stock = new iProperty(directory + "stock.properties");
 
 		if(!this.mysql) {
 			this.buying = new iProperty(directory + "buying.properties");
@@ -426,8 +426,8 @@ public class iConomy extends Plugin {
 		this.db = this.settings.getString("db", "jdbc:mysql://localhost:3306/minecraft");
 
 		// Data
-		//iData = new iData(this.mysql, this.startingBalance, this.driver, this.user, this.pass, this.db);
 		iData.setup(this.mysql, this.startingBalance, this.driver, this.user, this.pass, this.db);
+
 		// Buying
 		items.put("1", "stone");
 		items.put("2", "grass");
@@ -2864,7 +2864,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[1]);
 
 						if (localPlayer == null) {
-							if(iData.hasBalance(split[2])) {
+							if(p.data.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -2939,7 +2939,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(iData.hasBalance(split[2])) {
+							if(p.data.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -2987,7 +2987,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(iData.hasBalance(split[2])) {
+							if(p.data.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3026,7 +3026,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(iData.hasBalance(split[2])) {
+							if(p.data.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3065,7 +3065,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(iData.hasBalance(split[2])) {
+							if(p.data.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3104,7 +3104,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(iData.hasBalance(split[2])) {
+							if(p.data.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3143,7 +3143,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(iData.hasBalance(split[2])) {
+							if(p.data.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3200,7 +3200,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(iData.hasBalance(split[2])) {
+							if(p.data.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
