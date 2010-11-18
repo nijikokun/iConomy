@@ -55,7 +55,7 @@ public final class iData implements Serializable {
 		return null;
 	}
 
-	public int globalBalance() {
+	public static int globalBalance() {
 		Connection conn = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
