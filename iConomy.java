@@ -30,19 +30,17 @@ public class iConomy extends Plugin {
 	private String directory = "iConomy/", lDirectory = "logs/";
 
 	// Property Files
-	private iProperty settings, prizes, buying, selling, auctions, auctioner, itemNames, sign, signOwners, signLocation, trades;
+	private iProperty settings, prizes, buying, selling, auctions, auctioner, itemNames, sign, signOwners, signLocation, trades, stocks;
 
-	// Hashmaps for lottery
+	// Hashmaps
 	private Map<String, String> hashPrizes;
+	static HashMap<String, Long> lastClick = new HashMap<String, Long>();
 
 	// Hashmaps for items
-	BidiMap items = new TreeBidiMap();
+	public static BidiMap items = new TreeBidiMap();
 
 	// Data Control
 	public iData data;
-
-	// Ranking
-	static HashMap<String, Long> lastClick = new HashMap<String, Long>();
 
 	// Money Timer Settings
 	private Timer mTime1, mTime2;
@@ -59,7 +57,7 @@ public class iConomy extends Plugin {
 	public String canPay, canCredit, canDebit, canReset, canRank, canTop, canView, canSell, canBuy, canAuction, canBid, canEnd, canLottery, canSign, canSignSell, canSignBuy;
 	public String canTrade;
 
-	// Shop Details
+	// Globals
 	public boolean globalAuction, globalShop, physicalShop, globalLottery, globalSigns, globalStock;
 
 	// Auction settings
@@ -68,6 +66,12 @@ public class iConomy extends Plugin {
 	public boolean auctionTimerRunning, auctionReserveMet = false;
 	public int auctionStartingBid = 0, auctionInterval, auctionItem = 0, auctionAmount = 0, auctionMin = 0;
 	public int auctionReserve = 0, auctionCurAmount = 0, auctionCurBid = 0, auctionCurBidCount = 0, auctionCurSecretBid = 0;
+
+	// Shop Supply/Demand settings
+	public int stockIndex, stockPivot, stockValue;
+
+	// Math.ceil((this.stockIndex/(stock+1))*this.stockPivot);
+	// Math.floor(((this.stockIndex/(stock+1))*this.stockPivot)/this.stockValue);
 
 	// Buying Template
 	public String buyInvalidAmount, buyNotEnough, buyReject, buyGive;
@@ -99,7 +103,7 @@ public class iConomy extends Plugin {
 	private String driver, user, pass, db;
 
 	// Versioning
-	private String   version = "0.9.4.7";
+	private String   version = "0.9.5";
 	private String  sversion = "0.8.5";
 	private String  aversion = "0.5";
 	private String  lversion = "0.3";
@@ -398,6 +402,7 @@ public class iConomy extends Plugin {
 		this.auctions = new iProperty(directory + "auction.properties");
 		this.auctioner = new iProperty(directory + "auctioner.properties");
 		this.trades = new iProperty(directory + "trading.properties");
+		this.stocks = new iProperty(directory + "stock.properties");
 
 		if(!this.mysql) {
 			this.buying = new iProperty(directory + "buying.properties");
@@ -758,6 +763,7 @@ public class iConomy extends Plugin {
 	}
 
 	/* Shop Item Functions */
+
 	public int itemNeedsAmount(String type, String itemId) {
 		if (this.mysql) {
 			Connection conn = null;
@@ -782,6 +788,7 @@ public class iConomy extends Plugin {
 						if (rs.getInt("cost") == 0) {
 							return 0;
 						} else {
+
 							return 1;
 						}
 					}
@@ -4281,8 +4288,6 @@ public class iConomy extends Plugin {
 				if (!(sign.getText(1).equalsIgnoreCase("sell") || sign.getText(1).equalsIgnoreCase("buy"))) {
 					return false;
 				}
-
-				player.addGroup("groupname");
 
 
 				if (!p.waitedEnough(player.getName())) {

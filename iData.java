@@ -1,5 +1,6 @@
 import java.io.*;
 import java.sql.*;
+import java.util.Map;
 import java.util.logging.Logger;
 
 public final class iData implements Serializable {
@@ -52,6 +53,51 @@ public final class iData implements Serializable {
 		}
 
 		return null;
+	}
+
+	public int globalBalance() {
+		Connection conn = null;
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		int current = 0;
+
+		if (mysql) {
+			try {
+				conn = MySQL();
+				ps = conn.prepareStatement("SELECT balance FROM iBalances");
+				rs = ps.executeQuery();
+
+				while(rs.next()) {
+					current += rs.getInt("balance");
+				}
+
+				return current;
+			} catch (SQLException ex) {
+				return 0;
+			} finally {
+				try {
+					if (ps != null) { ps.close(); }
+					if (rs != null) { rs.close(); }
+					if (conn != null) { conn.close(); }
+				} catch (SQLException ex) { }
+			}
+		} else {
+			Map balances;
+
+			try {
+				balances = this.accounts.returnMap();
+			} catch (Exception ex) {
+				log.info("[iConomy] Listing failed for accounts.");
+				return 0;
+			}
+
+			for (Object key: balances.keySet()) {
+				int balance = Integer.parseInt((String)balances.get(key));
+				current += balance;
+			}
+
+			return current;
+		}
 	}
 
 	public boolean hasBalance(String playerName) {
