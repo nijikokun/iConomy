@@ -3,10 +3,10 @@ public class Product {
 	public static final double INDEX  = 10000;
 	private double stack; // volume of trade, stacks etc.
 	private double stock;
-	
+
 	public Product() {
 	}
-	
+
 	public double value(int quantity, boolean sell) {
 		double currencyIndex = iData.globalBalance() / INDEX;
 		double stockPivot = (1 + (INDEX * Simulation.averageStock()));
@@ -15,12 +15,12 @@ public class Product {
 			value *= Simulation.getDevaluation();
 		return value;
 	}
-	
+
 	/*
 	=CEILING((($I$6/(D2+1))*$I$3*E2),1)
-	
+
 	Currency.inCirculation()/INDEX
-	
+
 	*/
 
 	public void setStock(double stock) {

@@ -17,7 +17,7 @@ public final class iData implements Serializable {
 	static String user = "root";
 	static String pass = "root";
 	static String db = "jdbc:mysql://localhost:3306/minecraft";
-	
+
 	// Directories
 	static String mainDir = "iConomy/";
 	static String logDir = "logs/";

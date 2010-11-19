@@ -40,7 +40,7 @@ public class iConomy extends Plugin {
 	public static BidiMap items = new TreeBidiMap();
 
 	// Data Control
-	public iData data = new iData();
+	//public iData data;
 
 	// Money Timer Settings
 	private Timer mTime1, mTime2;
@@ -112,7 +112,7 @@ public class iConomy extends Plugin {
 
 	public iConomy() {
 		this.settings = null;
-		this.data = null;
+		//iData = null;
 		this.mTime1 = null;
 		this.mTime2 = null;
 		this.auctionTimer = null;
@@ -402,7 +402,7 @@ public class iConomy extends Plugin {
 		this.auctions = new iProperty(directory + "auction.properties");
 		this.auctioner = new iProperty(directory + "auctioner.properties");
 		this.trades = new iProperty(directory + "trading.properties");
-		//this.stock = new iProperty(directory + "stock.properties");
+		this.stocks = new iProperty(directory + "stock.properties");
 
 		if(!this.mysql) {
 			this.buying = new iProperty(directory + "buying.properties");
@@ -1091,7 +1091,7 @@ public class iConomy extends Plugin {
 			}
 			catch (NumberFormatException ex)
 			{
-				player.sendMessage("§cNot a valid page number.");
+				player.sendMessage("Â§cNot a valid page number.");
 			}
 		}
 	}
@@ -1219,7 +1219,7 @@ public class iConomy extends Plugin {
 			}
 			catch (NumberFormatException ex)
 			{
-				player.sendMessage("§cNot a valid page number.");
+				player.sendMessage("Â§cNot a valid page number.");
 			}
 		}
 	}
@@ -2864,7 +2864,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[1]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -2939,7 +2939,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -2987,7 +2987,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3026,7 +3026,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3065,7 +3065,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3104,7 +3104,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3143,7 +3143,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -3200,7 +3200,7 @@ public class iConomy extends Plugin {
 						localPlayer = p.getPlayer(split[2]);
 
 						if (localPlayer == null) {
-							if(p.data.hasBalance(split[2])) {
+							if(iData.hasBalance(split[2])) {
 								pName = split[2];
 							} else {
 								player.sendMessage(Colors.Rose + "Player does not have account: " + split[2]);
@@ -4212,7 +4212,7 @@ public class iConomy extends Plugin {
 							i++;
 						}
 
-						player.sendMessage("§6[Trade]§f Trading: " + name + " - Amount: " + amount + ".");
+						player.sendMessage("Â§6[Trade]Â§f Trading: " + name + " - Amount: " + amount + ".");
 
 						//Calculates the amount of gold (or the currency) to give the player
 						if (factor != 0) {
@@ -4234,28 +4234,28 @@ public class iConomy extends Plugin {
 
 								//Let you and everybody know what happened...
 								if(itemId != 0)
-									player.sendMessage("§6[Trade]§f You received " + (give * toGive) + " " + p.itemName(cInt(itemId)) + ".");
+									player.sendMessage("Â§6[Trade]Â§f You received " + (give * toGive) + " " + p.itemName(cInt(itemId)) + ".");
 								else {
-									player.sendMessage("§6[Trade]§f You received " + (give * toGive) + p.moneyName + ".");
+									player.sendMessage("Â§6[Trade]Â§f You received " + (give * toGive) + p.moneyName + ".");
 								}
 
-								player.sendMessage("§6[Trade]§f There are " + remainder + " " + name + " left in the chest.");
+								player.sendMessage("Â§6[Trade]Â§f There are " + remainder + " " + name + " left in the chest.");
 								if(itemId != 0)
-									p.broadcast("§6[Trade] " + player.getName() + " got " + (give * toGive) + " " + p.itemName(cInt(itemId)) + " from trade.");
+									p.broadcast("Â§6[Trade] " + player.getName() + " got " + (give * toGive) + " " + p.itemName(cInt(itemId)) + " from trade.");
 								else {
-									p.broadcast("§6[Trade] " + player.getName() + " got " + (give * toGive) + p.moneyName + " from trade.");
+									p.broadcast("Â§6[Trade] " + player.getName() + " got " + (give * toGive) + p.moneyName + " from trade.");
 								}
 							} else {
-								player.sendMessage("§6[Trade]§f Not enough items (" + amount + "/" + factor + ") for trade.");
+								player.sendMessage("Â§6[Trade]Â§f Not enough items (" + amount + "/" + factor + ") for trade.");
 							}
 						} else {
-							player.sendMessage("§6[Trade]§f This item cannot be used for trade.");
+							player.sendMessage("Â§6[Trade]Â§f This item cannot be used for trade.");
 						}
 
 						//Update the chest content
 						chest.update();
 					} else {
-						player.sendMessage("§6[Trade]§f Add the items into the first slot.");
+						player.sendMessage("Â§6[Trade]Â§f Add the items into the first slot.");
 					}
 
 					return false;
@@ -4264,7 +4264,7 @@ public class iConomy extends Plugin {
 				// Trade Recursive Information~
 				if((sign.getText(1).equalsIgnoreCase("[rates]"))) {
 					Map traders;
-					player.sendMessage("§6[Trade]§f Trading rates are currently:");
+					player.sendMessage("Â§6[Trade]Â§f Trading rates are currently:");
 
 					try {
 						traders = p.trades.returnMap();
@@ -4277,9 +4277,9 @@ public class iConomy extends Plugin {
 						String tradeData[] = data.split(",");
 
 						if(tradeData.length == 4)
-							player.sendMessage("    §6-§f " + tradeData[1] + "x " + (String) key + " for " + tradeData[2] + " " + p.itemName(tradeData[3]));
+							player.sendMessage("    Â§6-Â§f " + tradeData[1] + "x " + (String) key + " for " + tradeData[2] + " " + p.itemName(tradeData[3]));
 						else {
-							player.sendMessage("    §6-§f " + tradeData[1] + "x " + (String) key + " for " + tradeData[2] + p.moneyName);
+							player.sendMessage("    Â§6-Â§f " + tradeData[1] + "x " + (String) key + " for " + tradeData[2] + p.moneyName);
 						}
 					}
 				}
