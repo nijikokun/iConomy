@@ -115,6 +115,28 @@ public final class iProperty {
 		save();
 	}
 
+	public double getDouble(String key) {
+		if (this.properties.containsKey(key)) {
+			return Double.parseDouble(this.properties.getProperty(key));
+		}
+
+		return 0;
+	}
+
+	public double getDouble(String key, double value) {
+		if (this.properties.containsKey(key)) {
+			return Double.parseDouble(this.properties.getProperty(key));
+		}
+
+		setDouble(key, value);
+		return value;
+	}
+
+	public void setDouble(String key, double value) {
+		this.properties.setProperty(key, String.valueOf(value));
+		save();
+	}
+
 	public long getLong(String key) {
 		if (this.properties.containsKey(key)) {
 			return Long.parseLong(this.properties.getProperty(key));

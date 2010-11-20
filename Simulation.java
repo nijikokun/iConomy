@@ -9,6 +9,7 @@ public class Simulation {
 
 	public void initilize() {
 		MapIterator glob = iConomy.items.mapIterator();
+
 		while (glob.hasNext())
 			items.put((String)glob.next(), new Product());
 	}
@@ -16,8 +17,10 @@ public class Simulation {
 	public static double averageStock() {
 		Iterator<Product> working = items.values().iterator();
 		double total = 0;
+
 		while(working.hasNext())
-	      total += working.next().getStock();
+			total += working.next().getStock();
+
 		return total / items.size();
 	}
 
