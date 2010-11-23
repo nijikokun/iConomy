@@ -161,6 +161,10 @@ public final class iData implements Serializable {
 				} catch (SQLException ex) { }
 			}
 		} else {
+			// To work with plugins we must do this.
+			accounts.load();
+
+			// Return the balance
 			return (hasBalance(playerName)) ? accounts.getInt(playerName) : accounts.getInt(playerName, startingBalance);
 		}
 

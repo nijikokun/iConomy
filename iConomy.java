@@ -70,20 +70,34 @@ public class iConomy extends Plugin {
 	public int decaySwing;
 	public double decay, sellPercent;
 
+	// Money template
+	public String moneyTag, moneyRecieve, moneyDeposited, moneyRemoved, moneyDeducted, moneyReset, moneyResetAlert, moneyPay, moneyNotEnough, moneyPaySelf, moneyPayFrom, moneyBalance, moneyBalancePlayer;
+
 	// Buying Template
-	public String buyInvalidAmount, buyNotEnough, buyReject, buyGive;
+	public String buyInvalidAmount, buyNotEnough, buyReject, buyGive, buyEnoughStock;
 
 	// Selling Template
 	public String sellInvalidAmount, sellReject, sellGiveAmount, sellGive,  sellNone;
 
+	// Shop
+	public String shopTag;
+	public String shopPurchaseBundle, shopPurchaseSingle, shopPurchaseStock, shopPurchaseAmountBundle, shopPurchaseAmountSingle, shopPurchaseAmountStock;
+	public String shopPurchaseUnavailable, shopPurchaseListStart, shopPurchaseListBundle, shopPurchaseListSingle, shopPurchaseListStock, shopSellingBundle;
+	public String shopSellingSingle, shopSellingStock, shopSellingAmountBundle, shopSellingAmountSingle, shopSellingAmountStock;
+	public String shopSellingUnavailable, shopSellingListStart, shopSellingListBundle, shopSellingListSingle, shopSellingListStock,shopItemData;
+	public String shopStockItem, shopStockLow, shopInvalidItem, shopInvalidAmount, shopPurchaseNoItems, shopSellingNoItems, shopInvalidPage;
+
+	// Trade
+	public String tradeTag, tradeItemAmount, tradeItemRecieve, tradeItemRemainder, tradeMoneyRecieve, tradeGlobalItemRecieve, tradeGlobalMoneyRecieve;
+	public String tradeItemNotEnough, tradeItemNotUsable, tradeItemFirstSlot, tradeRates, tradeRatesForItem, tradeRatesForMoney;
+
 	// Lottery Template
-	public String lotteryNotEnough, lotteryLoser, lotteryNotAvailable, lotteryWinner, lotteryLimit, lotteryCost;
-	public String lotteryTag = Colors.White + "["+Colors.Green+"Lottery"+Colors.White+"]";
+	public String lotteryTag, lotteryNotEnough, lotteryLoser, lotteryNotAvailable, lotteryWinner, lotteryLimit, lotteryCost;
 
 	// Sign Shop Template
 	public String signFailedToParse, signAmountGreaterThan, signValuesNotNumerical, signInvalidItem, signMaxBuySell, signTransactionGreaterThan, signSellCreated, signBuyCreated;
 	private String signWait, signOwnerBankrupt, signUpgradeAmount, signUpgradeExists, signSold, signStocked, signNotEnough, signNotInStock,signBoughtAmount,signLeftAmount, signNotEnoughp, signInvalid;
-	private String signNotInStocky,signNoExists;
+	private String signNotInStocky,signNoExists, signStockFull, signStockOwnerFull;
 
 	// Logging
 	public boolean logPay, logBuy, logSell, logAuction, logSigns, logTrade;
@@ -124,8 +138,12 @@ public class iConomy extends Plugin {
 
 			String latest = getVersion();
 			if(latest != null) {
-				if(!latest.equals(version)) {
-					log.info("[iConomy Update] A new version of iConomy has been released! v"+latest+"!");
+				if(!latest.equals("1")) {
+					String[] data = latest.split(",");
+
+					// iConomy release data, finally a place to put update info.
+					log.info("[iConomy Update] iConomy v"+data[0]+" has been released!");
+					log.info("[iConomy Update] " + data[1]);
 				}
 			}
 		} else {
@@ -151,7 +169,7 @@ public class iConomy extends Plugin {
 		etc.getLoader().addListener(PluginLoader.Hook.COMMAND, l, this, PluginListener.Priority.MEDIUM);
 		etc.getLoader().addListener(PluginLoader.Hook.LOGIN, l, this, PluginListener.Priority.LOW);
 		etc.getLoader().addListener(PluginLoader.Hook.BLOCK_CREATED, l, this, PluginListener.Priority.HIGH);
-		etc.getLoader().addListener( PluginLoader.Hook.BLOCK_DESTROYED, l, this, PluginListener.Priority.MEDIUM);
+		etc.getLoader().addListener(PluginLoader.Hook.ARM_SWING, l, this, PluginListener.Priority.MEDIUM);
 		etc.getLoader().addListener(PluginLoader.Hook.COMPLEX_BLOCK_CHANGE, l, this, PluginListener.Priority.MEDIUM);
 	}
 
@@ -300,7 +318,8 @@ public class iConomy extends Plugin {
 		this.startingBalance = this.settings.getInt("starting-balance", 0);
 
 		// Lottery Ticket Cost
-		this.ticketCost = this.settings.getInt("ticket-cost", 150);
+		if(this.globalLottery)
+			this.ticketCost = this.settings.getInt("ticket-cost", 150);
 
 		// Ticker Amounts
 		this.moneyGive = this.settings.getInt("money-give", 0);
@@ -314,16 +333,20 @@ public class iConomy extends Plugin {
 		this.moneyName = (" " + this.settings.getString("money-name", "coin"));
 
 		// Sign Shop
-		this.signMaxAmount = this.settings.getInt("sign-max-amount", 1000);
-		this.signOwnUse = this.settings.getBoolean("sign-own-use",true);
-		this.signOwnAmount = this.settings.getInt("sign-own-amount", 3);
-		this.signOwnUpgrade = this.settings.getInt("sign-upgrade-cost", 300);
-		this.signWaitAmount = this.settings.getInt("sign-wait-amount", 2);
+		if(this.globalSigns) {
+			this.signMaxAmount = this.settings.getInt("sign-max-amount", 1000);
+			this.signOwnUse = this.settings.getBoolean("sign-own-use",true);
+			this.signOwnAmount = this.settings.getInt("sign-own-amount", 3);
+			this.signOwnUpgrade = this.settings.getInt("sign-upgrade-cost", 300);
+			this.signWaitAmount = this.settings.getInt("sign-wait-amount", 2);
+		}
 
 		// Global Supply / Demand
-		this.decay = this.settings.getDouble("shop-decay", 0.86234);
-		this.decaySwing = this.settings.getInt("shop-decay-seconds", 1);
-		this.sellPercent = this.settings.getDouble("shop-sell-offset", 0.2);
+		if(this.globalStock) {
+			this.decay = this.settings.getDouble("shop-decay", 0.86234);
+			this.decaySwing = this.settings.getInt("shop-decay-seconds", 1);
+			this.sellPercent = this.settings.getDouble("shop-sell-offset", 0.2);
+		}
 
 		// Groups per Command
 		this.canPay = this.settings.getString("can-pay", "*");
@@ -352,47 +375,124 @@ public class iConomy extends Plugin {
 		this.logSigns = this.settings.getBoolean("log-signs", false);
 		this.logTrade = this.settings.getBoolean("log-trade", false);
 
-		// Buy / Sell messages
-		this.sellGive = this.settings.getString("sell-success", "Your account has been credited with %s!");
-		this.sellGiveAmount = this.settings.getString("sell-success-sold", "Sold %d out of %d!");
-		this.sellReject = this.settings.getString("sell-rejected", "Sorry, that item is currently unavailable!");
-		this.sellNone = this.settings.getString("sell-none", "Whoops, you seem to not have any of that item!");
-		this.buyGive = this.settings.getString("buy-success", "Your purchase cost you %s! Here you go :)!");
-		this.buyReject = this.settings.getString("buy-rejected", "Sorry, that item is currently unavailable!");
-		this.buyNotEnough = this.settings.getString("buy-not-enough", "Sorry, you currently don't have enough to buy that!");
-		this.buyInvalidAmount = this.settings.getString("buy-invalid-amount", "Sorry, you must buy these in increments of %d!");
-		this.sellInvalidAmount = this.settings.getString("sell-invalid-amount", "Sorry, you must sell these in increments of %d!");
+		// Controls the global [Money] template
+		this.moneyTag = this.settings.getString("money-tag", "[Money]");
+		this.moneyRecieve = this.settings.getString("money-recieve","You recieved %1$s.");
+		this.moneyDeposited = this.settings.getString("money-deposited", "%1$s deposited into %2$s's account.");
+		this.moneyRemoved = this.settings.getString("money-removed", "%1$s removed from %2$s's account.");
+		this.moneyDeducted = this.settings.getString("money-deducted", "%1$s was deducted from your account.");
+		this.moneyReset = this.settings.getString("money-reset", "Your account has been reset.");
+		this.moneyResetAlert = this.settings.getString("money-reset-alert", "%1$s's account has been reset.");
+		this.moneyPay = this.settings.getString("money-pay","You have sent %1$s to %2$s.");
+		this.moneyNotEnough = this.settings.getString("money-not-enough","You do not have enough money.");
+		this.moneyPaySelf = this.settings.getString("money-pay-self","You cannot send money to yourself.");
+		this.moneyPayFrom = this.settings.getString("money-pay-from","%1$s has sent you %2$s.");
+		this.moneyBalance = this.settings.getString("money-balance","Balance: §2%1$s");
+		this.moneyBalancePlayer = this.settings.getString("money-balance-player","%1$s's Balance: %2$s");
 
-		// Lottery messages
-		this.lotteryNotEnough = this.settings.getString("lottery-not-enough", "Sorry, you do not have enough to buy a ticket!");
-		this.lotteryWinner = this.settings.getString("lottery-winner", "Congratulations %s won %d %s in the lottery!");
-		this.lotteryLoser = this.settings.getString("lottery-loser", "The lady looks at you and shakes her head. Try Again!.");
-		this.lotteryNotAvailable = this.settings.getString("lottery-not-available", "Lottery seems to be unavailable this time. Try again!");
-		this.lotteryCost = this.settings.getString("lottery-cost", "The lady snatches %s from your hand and gives you a ticket.");
+		// Controls the global [Shop] buy/sell template [May or may not be converted later on]
+		if(this.globalShop) {
+			this.sellGive = this.settings.getString("sell-success", "Your account has been credited with %1$s!");
+			this.sellGiveAmount = this.settings.getString("sell-success-sold", "Sold %1$d out of %2$d!");
+			this.sellReject = this.settings.getString("sell-rejected", "Sorry, that item is currently unavailable!");
+			this.sellNone = this.settings.getString("sell-none", "Whoops, you seem to not have any of that item!");
+			this.buyGive = this.settings.getString("buy-success", "Your purchase cost you %1$s! Here you go :)!");
+			this.buyReject = this.settings.getString("buy-rejected", "Sorry, that item is currently unavailable!");
+			this.buyNotEnough = this.settings.getString("buy-not-enough", "Sorry, you currently don't have enough to buy that!");
+			this.buyInvalidAmount = this.settings.getString("buy-invalid-amount", "Sorry, you must buy these in increments of %1$d!");
+			this.sellInvalidAmount = this.settings.getString("sell-invalid-amount", "Sorry, you must sell these in increments of %1$d!");
+			this.buyEnoughStock = this.settings.getString("buy-not-enough-stock", "Sorry, stock on that item is currently low!");
+		}
 
-		// Sign Shop messages
-		this.signFailedToParse = this.settings.getString("sign-failed-parse","Failed to parse: %s");
-		this.signAmountGreaterThan = this.settings.getString("sign-amount-greater-than","Amount must be greater then %d");
-		this.signTransactionGreaterThan = this.settings.getString("sign-transaction-greater-than","Transaction amount must be greater then %d");
-		this.signValuesNotNumerical = this.settings.getString("sign-values-numerical","Values are not numerical: %s");
-		this.signMaxBuySell = this.settings.getString("sign-max-buysell","You may not sell or buy items in amounts over %d");
-		this.signInvalidItem = this.settings.getString("sign-invalid-item","Invalid item!");
-		this.signWait = this.settings.getString("sign-wait","You need to wait %d seconds before shopping!");
-		this.signOwnerBankrupt = this.settings.getString("sign-owner-bankrupt","%s is currently out of %s.");
-		this.signSellCreated = this.settings.getString("sign-sell-created","Shop sign created! People can sell %d %s for %s to you.");
-		this.signBuyCreated = this.settings.getString("sign-buy-created","Shop sign created! People can buy %d %s for %s from you.");
-		this.signUpgradeAmount = this.settings.getString("sign-upgrade-amount","Cannot upgrade! You must have at least %s to upgrade.");
-		this.signUpgradeExists = this.settings.getString("sign-upgrade-exists","Sorry! Cannot upgrade, you must create a sign first!");
-		this.signSold = this.settings.getString("sign-player-sold","You sold %d %s giving you %s");
-		this.signStocked = this.settings.getString("sign-owner-stock", "%d %s has been put into stock!");
-		this.signNotEnough = this.settings.getString("sign-owner-not-enough-stock", "%s doesn't have enough %s left in stock!");
-		this.signNotInStock = this.settings.getString("sign-owner-no-stock", "%s doesn't have that in stock!");
-		this.signNotInStocky = this.settings.getString("sign-you-no-stock", "%s don't have that in stock!");
-		this.signBoughtAmount = this.settings.getString("sign-bought-amount","You bought %d of %s, it cost you %s");
-		this.signLeftAmount = this.settings.getString("sign-amount-left", "You now have %d left of %s in your stock.");
-		this.signNotEnoughp = this.settings.getString("sign-not-enough-player", "You don't have enough %s to do that!");
-		this.signInvalid = this.settings.getString("sign-invalid", "Shop no longer exists, resetting text!");
-		this.signNoExists = this.settings.getString("sign-non-existant", "You don't have a sign with that item.");
+		// Controls the global [Lottery] template
+		if(this.globalLottery) {
+			this.lotteryTag = this.settings.getString("lottery-tag", "[Lottery]");
+			this.lotteryNotEnough = this.settings.getString("lottery-not-enough", "Sorry, you do not have enough to buy a ticket!");
+			this.lotteryWinner = this.settings.getString("lottery-winner", "Congratulations %1$s won %2$d %3$s in the lottery!");
+			this.lotteryLoser = this.settings.getString("lottery-loser", "The lady looks at you and shakes her head. Try Again!.");
+			this.lotteryNotAvailable = this.settings.getString("lottery-not-available", "Lottery seems to be unavailable this time. Try again!");
+			this.lotteryCost = this.settings.getString("lottery-cost", "The lady snatches %1$s from your hand and gives you a ticket.");
+		}
+
+		// Controls the global [Sign] template
+		if(this.globalSigns) {
+			this.signFailedToParse = this.settings.getString("sign-failed-parse","Failed to parse: %1$s");
+			this.signAmountGreaterThan = this.settings.getString("sign-amount-greater-than","Amount must be greater then %1$d");
+			this.signTransactionGreaterThan = this.settings.getString("sign-transaction-greater-than","Transaction amount must be greater then %1$d");
+			this.signValuesNotNumerical = this.settings.getString("sign-values-numerical","Values are not numerical: %1$s");
+			this.signMaxBuySell = this.settings.getString("sign-max-buysell","You may not sell or buy items in amounts over %1$d");
+			this.signInvalidItem = this.settings.getString("sign-invalid-item","Invalid item!");
+			this.signWait = this.settings.getString("sign-wait","You need to wait %1$d seconds before shopping!");
+			this.signOwnerBankrupt = this.settings.getString("sign-owner-bankrupt","%1$s is currently out of %2$s.");
+			this.signSellCreated = this.settings.getString("sign-sell-created","Shop sign created! People can sell %1$d %2$s for %3$s to you.");
+			this.signBuyCreated = this.settings.getString("sign-buy-created","Shop sign created! People can buy %1$d %2$s for %3$s from you.");
+			this.signUpgradeAmount = this.settings.getString("sign-upgrade-amount","Cannot upgrade! You must have at least %1$s to upgrade.");
+			this.signUpgradeExists = this.settings.getString("sign-upgrade-exists","Sorry! Cannot upgrade, you must create a sign first!");
+			this.signSold = this.settings.getString("sign-player-sold","You sold %1$d %2$s giving you %3$s");
+			this.signStocked = this.settings.getString("sign-owner-stock", "%1$d %2$s has been put into stock!");
+			this.signNotEnough = this.settings.getString("sign-owner-not-enough-stock", "%1$s doesn't have enough %2$s left in stock!");
+			this.signNotInStock = this.settings.getString("sign-owner-no-stock", "%1$s doesn't have that in stock!");
+			this.signNotInStocky = this.settings.getString("sign-you-no-stock", "%1$s don't have that in stock!");
+			this.signBoughtAmount = this.settings.getString("sign-bought-amount","You bought %1$d of %2$s, it cost you %3$s");
+			this.signLeftAmount = this.settings.getString("sign-amount-left", "You now have %1$d left of %2$s in your stock.");
+			this.signNotEnoughp = this.settings.getString("sign-not-enough-player", "You don't have enough %1$s to do that!");
+			this.signInvalid = this.settings.getString("sign-invalid", "Shop no longer exists, resetting text!");
+			this.signNoExists = this.settings.getString("sign-non-existant", "You don't have a sign with that item.");
+			this.signStockFull = this.settings.getString("sign-stock-full", "Sorry, currently your stock is full!");
+			this.signStockOwnerFull = this.settings.getString("sign-stock-owner-full", "Sorry, %1$s's stock is currently full!");
+		}
+
+		// Controls the global [Trade] template
+		if(this.globalTrade) {
+			this.tradeTag = this.settings.getString("trade-tag", "[Trade]");
+			this.tradeItemAmount = this.settings.getString("trade-item-amount","Trading: %1$s - Amount: %2$d.");
+			this.tradeItemRecieve = this.settings.getString("trade-item-recieve", "You received %1$d %2$s.");
+			this.tradeItemRemainder = this.settings.getString("trade-item-remainder", "There are %1$d %2$s left in the chest.");
+			this.tradeMoneyRecieve = this.settings.getString("trade-money-recieve", "You recieved %1$s.");
+			this.tradeGlobalItemRecieve = this.settings.getString("trade-global-item-recieve", "%1$s got %2$d %3$s from trading.");
+			this.tradeGlobalMoneyRecieve = this.settings.getString("trade-global-money-recieve", "%1$s got %2$s from trading.");
+			this.tradeItemNotEnough = this.settings.getString("trade-item-not-enough","Not enough items (%1$d/%2$d) for trade.");
+			this.tradeItemNotUsable = this.settings.getString("trade-item-not-usable","This item cannot be used for trade.");
+			this.tradeItemFirstSlot = this.settings.getString("trade-item-first-slot","Add the items in the first slot.");
+			this.tradeRates = this.settings.getString("trade-rates","Trading rates are currently:");
+			this.tradeRatesForItem = this.settings.getString("trade-rates-for-item","    - %1$sx %2$s for %3$d %4$s.");
+			this.tradeRatesForMoney = this.settings.getString("trade-rates-for-money","    - %1$sx %2$s for %3$s.");
+		}
+
+		// Controls the global [Shop] template
+		if(this.globalShop) {
+			this.shopTag = this.settings.getString("shop-tag", "[Shop]");
+			this.shopInvalidItem = this.settings.getString("shop-invalid-item", "Invalid Item!");
+			this.shopInvalidAmount = this.settings.getString("shop-invalid-amount", "Invalid amount specified!");
+			this.shopItemData = this.settings.getString("shop-item-data", "Item: %1$s [# %1$d] Details:");
+			this.shopPurchaseBundle = this.settings.getString("shop-purchase-bundle", "Must be bought in bundles of %1$d for %2$s.");
+			this.shopPurchaseSingle = this.settings.getString("shop-purchase-single", "Can be bought for %1$s per item.");
+			this.shopPurchaseStock = this.settings.getString("shop-purchase-stock", "Currently flux is at %1$s per item.");
+			this.shopPurchaseAmountBundle = this.settings.getString("shop-purchase-amount-bundle", "%1$d bundles cost %2$s.");
+			this.shopPurchaseAmountSingle = this.settings.getString("shop-purchase-amount-single", "%1$d will cost %2$s.");
+			this.shopPurchaseAmountStock = this.settings.getString("shop-purchase-amount-stock", "%1$d fluxuating at %2$s.");
+			this.shopPurchaseUnavailable = this.settings.getString("shop-purchase-unavailable", "Currently cannot be bought!");
+			this.shopPurchaseListStart = this.settings.getString("shop-purchase-list-start", "Shop Buying (Page %1$d of %2$d):");
+			this.shopPurchaseListBundle = this.settings.getString("shop-purchase-list-bundle", "%1$s costs %2$s at %3$d per bundle.");
+			this.shopPurchaseListSingle = this.settings.getString("shop-purchase-list-single", "%1$s costs %2$s per item");
+			this.shopPurchaseListStock = this.settings.getString("shop-purchase-list-stock", "%1$s in flux at %2$s per item.");
+			this.shopPurchaseNoItems = this.settings.getString("shop-purchase-no-items", "No items are available for buying.");
+			this.shopSellingBundle = this.settings.getString("shop-selling-bundle", "Must be sold in bundles of %1$d for %2$s.");
+			this.shopSellingSingle = this.settings.getString("shop-selling-single", "Can be sold for %1$s per item.");
+			this.shopSellingStock = this.settings.getString("shop-selling-stock", "Current flux is at %1$s per item.");
+			this.shopSellingAmountBundle = this.settings.getString("shop-selling-amount-bundle", "%1$d bundles are selling for %2$s.");
+			this.shopSellingAmountSingle = this.settings.getString("shop-selling-amount-single", "%1$d will sell for %2$s.");
+			this.shopSellingAmountStock = this.settings.getString("shop-selling-amount-stock", "%1$d fluxuating at %2$s.");
+			this.shopSellingUnavailable = this.settings.getString("shop-selling-unavailable", "Currently cannot be sold!");
+			this.shopSellingListStart = this.settings.getString("shop-selling-list-start", "Shop Selling (Page %1$d of %2$d):");
+			this.shopSellingListBundle = this.settings.getString("shop-selling-list-bundle", "%1$s is worth %2$s at %3$d per bundle.");
+			this.shopSellingListSingle = this.settings.getString("shop-selling-list-single", "%1$s is worth %2$s per item");
+			this.shopSellingListStock = this.settings.getString("shop-selling-list-stock", "%1$s in flux at %2$s per item.");
+			this.shopSellingNoItems = this.settings.getString("shop-selling-no-items", "No items are available for selling.");
+			this.shopStockItem = this.settings.getString("shop-stock-item", "Current Stock: %1$d");
+			this.shopStockLow = this.settings.getString("shop-stock-low", "Currently stock on that item is low!");
+			this.shopInvalidPage = this.settings.getString("shop-invalid-page", "Not a valid page number.");
+		}
 
 		// To be added
 		//this.signUpgraded = this.settings.getString("sign-upgraded", "Successfully upgraded sign shop! You can now use %s signs");
@@ -619,8 +719,8 @@ public class iConomy extends Plugin {
 				int stock = Integer.parseInt(sData[0]);
 				double weight = Double.parseDouble(sData[1]);
 
-				itemWeight.put(String.valueOf(items.getKey(item)), weight);
-				itemStock.put(String.valueOf(items.getKey(item)), stock);
+				itemWeight.put(String.valueOf(item), weight);
+				itemStock.put(String.valueOf(item), stock);
 			}
 		}
 
@@ -661,7 +761,6 @@ public class iConomy extends Plugin {
 				public void run() {
 					for (String item : itemWeight.keySet()) {
 						double weight = iConomy.this.itemWeight(item);
-						int stock = iConomy.this.itemStock(item);
 
 						if(weight < 1 && weight > -1) {
 
@@ -669,8 +768,14 @@ public class iConomy extends Plugin {
 							if(weight < 0) {
 								double decay = iConomy.this.decay*-1;
 								weight -= decay;
+
+								if(debugging)
+									log.info("Decay: " + decay + " Weight: " + weight);
 							} else {
 								weight -= iConomy.this.decay;
+
+								if(debugging)
+									log.info("Decay: " + iConomy.this.decay + " Weight: " + weight);
 							}
 						}
 
@@ -691,7 +796,7 @@ public class iConomy extends Plugin {
 	}
 
 	/* Versioning */
-	private static String getVersion()
+	private String getVersion()
 	{
 		String content = null;
 
@@ -699,7 +804,7 @@ public class iConomy extends Plugin {
 		// wrapped them all in one try/catch statement.
 		try
 		{
-			URL url = new URL("http://mc.nexua.org/plugins/iConomy/?latest");
+			URL url = new URL("http://mc.nexua.org/plugins/iConomy/?latest&current=" + this.version);
 			URLConnection urlConnection = url.openConnection();
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
 
@@ -819,7 +924,7 @@ public class iConomy extends Plugin {
 				out.newLine();
 				out.close();
 			} catch (Exception es) {
-				log.severe("[iConomy Auction Logging] " + es.getMessage());
+				log.severe("[iConomy Signs Logging] " + es.getMessage());
 			}
 		} else if (type.equalsIgnoreCase("trade") && this.logTrade) {
 			try {
@@ -829,7 +934,7 @@ public class iConomy extends Plugin {
 				out.newLine();
 				out.close();
 			} catch (Exception es) {
-				log.severe("[iConomy Auction Logging] " + es.getMessage());
+				log.severe("[iConomy Trade Logging] " + es.getMessage());
 			}
 		}
 	}
@@ -854,6 +959,10 @@ public class iConomy extends Plugin {
 
 				if (rs.next()) {
 					if (rs.getInt("perbundle") > 1) {
+						if(this.globalStock) {
+							return 1;
+						}
+
 						return rs.getInt("perbundle");
 					} else {
 						if (rs.getInt("cost") == 0) {
@@ -890,6 +999,10 @@ public class iConomy extends Plugin {
 				return 0;
 			}
 
+			if(this.globalStock) {
+				return 1;
+			}
+
 			if (info.contains(",")) {
 				String[] item = info.split(",");
 				return Integer.parseInt(item[0]);
@@ -900,13 +1013,7 @@ public class iConomy extends Plugin {
 	}
 
 	public boolean itemCan(String type, String itemId, int amount) {
-		int itemAmount = 0;
-
-		if(this.globalStock) {
-			itemAmount = 1;
-		} else {
-			itemAmount = this.itemNeedsAmount(type, itemId);
-		}
+		int itemAmount = this.itemNeedsAmount(type, itemId);
 
 		// Maximum
 		if (amount > 6400) {
@@ -974,9 +1081,9 @@ public class iConomy extends Plugin {
 			return cost;
 		} else {
 			if (type.equals("buy")) {
-				info = this.buying.getString((String) items.get(itemId));
+				info = this.buying.getString(String.valueOf(items.get(itemId)));
 			} else if (type.equals("sell")) {
-				info = this.selling.getString((String) items.get(itemId));
+				info = this.selling.getString(String.valueOf(items.get(itemId)));
 			}
 
 			if (info.equals("")) {
@@ -1014,6 +1121,14 @@ public class iConomy extends Plugin {
 			double weight = itemWeight.get(item);
 			int stock = itemStock.get(item);
 
+			if(stock < 0) {
+				stock = 1;
+			}
+
+			/*if(debugging) { somethings wrong with it idk :<
+				log.info("[iConomy Stock Update] item: " + item + " stock: " + stock + " weight: " + weight);
+			}*/
+
 			if(this.mysql) {
 				Connection conn = null;
 				PreparedStatement ps = null;
@@ -1028,7 +1143,7 @@ public class iConomy extends Plugin {
 					ps.setInt(3, Integer.parseInt(item));
 					ps.executeUpdate();
 				} catch (SQLException ex) {
-					log.severe("[iConomy] Unable to update the item stock for [" + item + "] from database!");
+					log.severe("[iConomy Stock Update] Unable to update the item stock for [" + item + "] from database!");
 				} finally {
 					try {
 						if (ps != null) { ps.close(); }
@@ -1045,15 +1160,15 @@ public class iConomy extends Plugin {
 	public void updateWeight(String itemId, double weight) {
 		itemWeight.put(itemId, weight);
 	}
-	
+
 	public double itemWeight(String itemId) {
 		return itemWeight.get(itemId);
 	}
-	
+
 	public void updateStock(String itemId, int stock) {
 		itemStock.put(itemId, stock);
 	}
-	
+
 	public int itemStock(String itemId) {
 		return itemStock.get(itemId);
 	}
@@ -1073,6 +1188,19 @@ public class iConomy extends Plugin {
 		int stockCost = itemStockCost(itemId);
 
 		return (int) Math.floor(stockCost*this.sellPercent);
+	}
+
+	public boolean enoughStock(String itemId, int amount) {
+		int stock = itemStock(itemId);
+
+		if(stock <= 1)
+			return false;
+
+		if(amount > stock) {
+			return false;
+		}
+
+		return true;
 	}
 
 	/* Shop Listing Functions */
@@ -1095,7 +1223,7 @@ public class iConomy extends Plugin {
 
 			while(rs.next()) { if(rs.getInt("cost") != 0) { i++; } }
 		} catch (SQLException ex) {
-			log.severe("[iConomy] Unable to count itemlist!");
+			log.severe("[iConomy Listing] Unable to count item list!");
 		} finally {
 			try {
 				if (ps != null) { ps.close(); }
@@ -1135,10 +1263,10 @@ public class iConomy extends Plugin {
 				int rowCount = this.listGetRows("iSell");
 
 				if(rowCount == 0) {
-					player.sendMessage(Colors.Rose +"No items for selling."); return;
+					player.sendMessage(this.shopTag + this.shopSellingNoItems); return;
 				}
 
-				player.sendMessage(Colors.White + "Shop Selling (Page " + Colors.Green  + (page) + Colors.White + " of " + Colors.Green  + (int)Math.ceil(rowCount / 10.0D) + Colors.White + "):");
+				player.sendMessage(this.shopTag + String.format(this.shopSellingListStart, page, (int)Math.ceil(rowCount/10.0D)));
 
 				i = amount;
 				while (rs.next()) {
@@ -1146,29 +1274,33 @@ public class iConomy extends Plugin {
 						if(i > amount) {
 							int itemId = rs.getInt("id");
 							int cost = rs.getInt("cost");
+							int stock = 0;
 							int perBundle = rs.getInt("perbundle");
 							boolean bundle = false;
-
-							if (cost == 0) {
-								continue;
-							}
+							String name = this.itemName(cInt(itemId));
 
 							if(perBundle != 0) {
 								bundle = true;
 							}
 
-							String name = this.itemName(cInt(itemId));
-
 							if(this.globalStock) {
 								bundle = false;
-
 								cost = this.itemStockSell(cInt(itemId));
+								stock = itemStock(cInt(itemId));
 							}
 
-							if(bundle)
-								player.sendMessage(Colors.Green + name + Colors.LightGray + " is worth " + Colors.Green + cost + this.moneyName + Colors.LightGray + " at " + Colors.Green + perBundle + Colors.LightGray + " per bundle.");
+							if (cost < 1) {
+								continue;
+							}
+
+							if(this.globalStock)
+								available.add(String.format(this.shopSellingListStock, name, cost+this.moneyName) + " " + String.format(this.shopStockItem, stock));
 							else {
-								player.sendMessage(Colors.Green + name + Colors.LightGray + " is worth " + Colors.Green + cost + this.moneyName + Colors.LightGray + " per item.");
+								if(bundle)
+									available.add(String.format(this.shopSellingAmountBundle, name, cost + this.moneyName, perBundle));
+								else {
+									available.add(String.format(this.shopSellingAmountSingle, name, cost + this.moneyName));
+								}
 							}
 						}
 						i++;
@@ -1177,7 +1309,7 @@ public class iConomy extends Plugin {
 					}
 				}
 			} catch (SQLException ex) {
-				log.severe("[iConomy] Unable to grab the itemlist from database!");
+				log.severe("[iConomy Selling List] Unable to grab the item list from database!");
 			} finally {
 				try {
 					if (ps != null) { ps.close(); }
@@ -1189,7 +1321,7 @@ public class iConomy extends Plugin {
 			try {
 				aList = this.selling.returnMap();
 			} catch (Exception ex) {
-				log.info("[iConomy] Listing failed for selling list"); return;
+				log.info("[iConomy Selling List] Listing failed for selling list"); return;
 			}
 
 			for (Object key: aList.keySet()) {
@@ -1198,36 +1330,57 @@ public class iConomy extends Plugin {
 				Boolean bundle = false;
 				int perBundle = 0;
 				int cost = 0;
+				int stock = 0;
 
-				if(cdata.equals("0")) {
+				if(cdata.equals("0") || cdata.equals("")) {
 					continue;
-				} else if(cdata.contains(",")) {
-					String[] item = cdata.split(",");
-					perBundle = Integer.parseInt(item[0]);
-					cost = Integer.valueOf(item[1]);
-					bundle = true;
-				} else {
-					bundle = false;
 				}
 
 				if(this.globalStock) {
 					bundle = false;
 
-					cost = this.itemStockSell(String.valueOf(items.getKey(key)));
+					if(items.getKey(name) != null) {
+						int itemId = Integer.parseInt(items.getKey(name).toString());
+
+						if(itemStock.get(cInt(itemId)) != null) {
+							cost = this.itemStockCost(cInt(itemId));
+							stock = itemStock(cInt(itemId));
+						} else {
+							continue;
+						}
+					} else {
+						log.info("[iConomy Selling List] Invalid item name. " + name);
+					}
+
+				} else if(cdata.contains(",")) {
+					String[] item = cdata.split(",");
+					perBundle = Integer.parseInt(item[0]);
+					cost = Integer.valueOf(item[1]);
+
+					bundle = true;
+				} else {
+					bundle = false;
 				}
 
-				if(bundle)
-					available.add(Colors.Green + name + Colors.LightGray + " is worth " + Colors.Green + cost + this.moneyName + Colors.LightGray + " at " + Colors.Green + perBundle + Colors.LightGray + " per bundle.");
+				if(cost < 1)
+					continue;
+
+				if(this.globalStock)
+					available.add(String.format(this.shopSellingListStock, name, cost+this.moneyName) + " " + String.format(this.shopStockItem, stock));
 				else {
-					available.add(Colors.Green + name + Colors.LightGray + " is worth " + Colors.Green + cost + this.moneyName + Colors.LightGray + " per item.");
+					if(bundle)
+						available.add(String.format(this.shopSellingAmountBundle, name, cost + this.moneyName, perBundle));
+					else {
+						available.add(String.format(this.shopSellingAmountSingle, name, cost + this.moneyName));
+					}
 				}
 			}
 
 			if(available.isEmpty()) {
-				player.sendMessage(Colors.Rose +"No items for selling."); return;
+				player.sendMessage(this.shopTag + this.shopSellingNoItems); return;
 			}
 
-			player.sendMessage(Colors.White + "Shop Selling (Page " + Colors.Green  + (page) + Colors.White + " of " + Colors.Green  + (int)Math.ceil(available.size() / 10.0D) + Colors.White + "):");
+			player.sendMessage(this.shopTag + String.format(this.shopSellingListStart, page, (int)Math.ceil(available.size()/10.0D)));
 
 			try {
 				int amount = page;
@@ -1244,7 +1397,7 @@ public class iConomy extends Plugin {
 			}
 			catch (NumberFormatException ex)
 			{
-				player.sendMessage("Â§cNot a valid page number.");
+				player.sendMessage(this.shopInvalidPage);
 			}
 		}
 	}
@@ -1277,16 +1430,17 @@ public class iConomy extends Plugin {
 				int rowCount = this.listGetRows("iBuy");
 
 				if(rowCount == 0) {
-					player.sendMessage(Colors.Rose +"No items for buying."); return;
+					player.sendMessage(this.shopTag + this.shopPurchaseNoItems); return;
 				}
 
-				player.sendMessage(Colors.White + "Shop Buying (Page " + Colors.Green  + (page) + Colors.White + " of " + Colors.Green  + (int)Math.ceil(rowCount / 10.0D) + Colors.White + "):");
+				player.sendMessage(this.shopTag + String.format(this.shopPurchaseListStart, page, (int)Math.ceil(rowCount / 10.0D)));
 
 				while (rs.next()) {
 					if(i < process) {
 						if(i > amount) {
 							int itemId = rs.getInt("id");
 							int cost = rs.getInt("cost");
+							int stock = 0;
 							int perBundle = rs.getInt("perbundle");
 							boolean bundle = false;
 
@@ -1302,14 +1456,18 @@ public class iConomy extends Plugin {
 
 							if(this.globalStock) {
 								bundle = false;
-
+								stock = itemStock(cInt(itemId));
 								cost = this.itemStockCost(cInt(itemId));
 							}
 
-							if(bundle)
-								player.sendMessage(Colors.Green + name + Colors.LightGray + " costs " + Colors.Green + cost + this.moneyName + Colors.LightGray + " at " + Colors.Green + perBundle + Colors.LightGray + " per bundle.");
+							if(this.globalStock)
+								available.add(String.format(this.shopPurchaseListStock, name, cost+this.moneyName) + " " + String.format(this.shopStockItem, stock));
 							else {
-								player.sendMessage(Colors.Green + name + Colors.LightGray + " costs " + Colors.Green + cost + this.moneyName + Colors.LightGray + " per item.");
+								if(bundle)
+									available.add(String.format(this.shopPurchaseBundle, name, cost+this.moneyName, perBundle));
+								else {
+									available.add(String.format(this.shopPurchaseSingle, name, cost+this.moneyName));
+								}
 							}
 						}
 						i++;
@@ -1318,7 +1476,7 @@ public class iConomy extends Plugin {
 					}
 				}
 			} catch (SQLException ex) {
-				log.severe("[iConomy] Unable to grab the itemlist from database!");
+				log.severe("[iConomy Buying List] Unable to grab the item list from database!");
 			} finally {
 				try {
 					if (ps != null) { ps.close(); }
@@ -1330,7 +1488,7 @@ public class iConomy extends Plugin {
 			try {
 				aList = this.buying.returnMap();
 			} catch (Exception ex) {
-				log.info("[iConomy] Listing failed for buying list"); return;
+				log.info("[iConomy Buying List] Listing failed for buying list"); return;
 			}
 
 			for (Object key: aList.keySet()) {
@@ -1339,36 +1497,54 @@ public class iConomy extends Plugin {
 				Boolean bundle = false;
 				int perBundle = 0;
 				int cost = 0;
+				int stock = 0;
 
-				if(cdata.equals("0")) {
-					continue;
+				if(this.globalStock) {
+					bundle = false;
+
+					if(items.getKey(name) != null) {
+						int itemId = Integer.parseInt(items.getKey(name).toString());
+
+						if(itemStock.get(cInt(itemId)) != null) {
+							cost = this.itemStockCost(cInt(itemId));
+							stock = itemStock(cInt(itemId));
+						} else {
+							continue;
+						}
+					} else {
+						log.info("[iConomy Buying List] Invalid item name. " + name);
+					}
+
 				} else if(cdata.contains(",")) {
 					String[] item = cdata.split(",");
 					perBundle = Integer.parseInt(item[0]);
 					cost = Integer.valueOf(item[1]);
+
 					bundle = true;
 				} else {
 					bundle = false;
 				}
 
-				if(this.globalStock) {
-					bundle = false;
+				if(cost < 1)
+					continue;
 
-					cost = this.itemStockCost(String.valueOf(items.getKey(key)));
-				}
-
-				if(bundle)
-					available.add(Colors.Green + name + Colors.LightGray + " costs " + Colors.Green + cost + this.moneyName + Colors.LightGray + " at " + Colors.Green + perBundle + Colors.LightGray + " per bundle.");
+				if(this.globalStock)
+					available.add(String.format(this.shopPurchaseListStock, name, cost+this.moneyName) + " " + String.format(this.shopStockItem, stock));
 				else {
-					available.add(Colors.Green + name + Colors.LightGray + " costs " + Colors.Green + cost + this.moneyName + Colors.LightGray + " per item.");
+					if(bundle)
+						available.add(String.format(this.shopPurchaseBundle, name, cost+this.moneyName, perBundle));
+					else {
+						available.add(String.format(this.shopPurchaseSingle, name, cost+this.moneyName));
+					}
 				}
+
 			}
 
 			if(available.isEmpty()) {
-				player.sendMessage(Colors.Rose +"No items for buying."); return;
+				player.sendMessage(this.shopTag + this.shopPurchaseNoItems); return;
 			}
 
-			player.sendMessage(Colors.White + "Shop Buying (Page " + Colors.Green  + (page) + Colors.White + " of " + Colors.Green  + (int)Math.ceil(available.size() / 10.0D) + Colors.White + "):");
+			player.sendMessage(this.shopTag + String.format(this.shopPurchaseListStart, page, (int)Math.ceil(available.size()/10.0D)));
 
 			try {
 				int amount = page;
@@ -1382,10 +1558,8 @@ public class iConomy extends Plugin {
 				for (int i = amount; i < amount + 10; i++)
 					if (available.size() > i)
 						player.sendMessage((String)available.get(i));
-			}
-			catch (NumberFormatException ex)
-			{
-				player.sendMessage("Â§cNot a valid page number.");
+			} catch (NumberFormatException ex) {
+				player.sendMessage(this.shopInvalidPage);
 			}
 		}
 	}
@@ -1393,18 +1567,18 @@ public class iConomy extends Plugin {
 	/* Shop Functions */
 	public boolean doPurchase(Player player, int itemId, int amount) {
 		int itemAmount = 0;
-		int needsAmount = 0;
+		int needsAmount = this.itemNeedsAmount("buy", cInt(itemId));
 
 		if(this.globalStock) {
-			needsAmount = 1;
 			itemAmount = this.itemStockCost(cInt(itemId));
 		} else {
 			itemAmount = this.itemCost("buy", cInt(itemId), amount, false);
-			needsAmount = this.itemNeedsAmount("buy", cInt(itemId));
 		}
 
 		if(iData.getBalance(player.getName()) < itemAmount){
 			player.sendMessage(Colors.Rose + this.buyNotEnough);
+
+			// Logging
 			log.info("[iConomy Shop] " + "Player " + player.getName() + " attempted to buy more [" + itemId + "] [" + amount + "] than they have in "+this.moneyName+" [" + itemAmount + "].");
 			this.shopLog("buy", player.getName() + "|0|203|" + itemId + "|" + amount + "|" + itemAmount + this.moneyName);
 
@@ -1412,8 +1586,25 @@ public class iConomy extends Plugin {
 				log.info("[iConomy Debugging] [" + player.getName() + "] ["+itemId+"] ["+amount+"] ["+itemAmount+"] [#20335]");
 		}
 
+		if(this.globalStock) {
+			if (!enoughStock(cInt(itemId), amount)) {
+				player.sendMessage(Colors.Rose + this.buyEnoughStock);
+
+				// Logging
+				log.info("[iConomy Shop] " + "Player " + player.getName() + " attempted to buy [" + amount + "] of [" + itemId + "], however no stock available.");
+				this.shopLog("buy", player.getName() + "|0|204|" + itemId + "|" + amount);
+
+				if(debugging)
+					log.info("[iConomy Debugging] [" + player.getName() + "] ["+itemId+"] ["+needsAmount+"] ["+amount+"] [#20336]");
+
+				return true;
+			}
+		}
+
 		if (!this.itemCan("buy", cInt(itemId), amount)) {
 			player.sendMessage(Colors.Rose + String.format(this.buyInvalidAmount, needsAmount));
+
+			// Logging
 			log.info("[iConomy Shop] " + "Player " + player.getName() + " attempted to buy bundle [" + itemId + "] with the offset amount [" + amount + "].");
 			this.shopLog("buy", player.getName() + "|0|202|" + itemId + "|" + amount);
 
@@ -1424,7 +1615,14 @@ public class iConomy extends Plugin {
 		}
 
 		if (itemAmount != 0) {
-			int total = this.itemCost("buy", cInt(itemId), amount, true);
+			int total = 0;
+
+			if(this.globalStock) {
+				total = itemAmount*amount;
+			} else {
+				itemAmount = this.itemCost("buy", cInt(itemId), amount, true);
+			}
+
 			String totalAmount = total + this.moneyName;
 
 			if (iData.getBalance(player.getName()) < total) {
@@ -1451,15 +1649,22 @@ public class iConomy extends Plugin {
 
 				this.updateStock(cInt(itemId), stock);
 				this.updateWeight(cInt(itemId), weight);
+
+				if(debugging)
+					log.info("[iConomy Stock Report] Item: " + itemId + " Stock: " + stock + " Amount Taken: " + amount);
 			}
 
 			// Send Message
 			player.sendMessage(Colors.Green + String.format(this.buyGive, totalAmount));
+
+			// Logging
 			log.info("[iConomy Shop] " + "Player " + player.getName() + " bought item [" + itemId + "] amount [" + amount + "] total [" + totalAmount + "].");
 			this.shopLog("buy", player.getName() + "|1|200|" + itemId + "|" + amount + "|" + total);
 		} else {
 			// Send Message
 			player.sendMessage(Colors.Rose + this.buyReject);
+
+			// Logging
 			log.info("[iConomy Shop] " + "Player " + player.getName() + " requested to buy an unavailable item: [" + itemId + "].");
 			this.shopLog("buy", player.getName() + "|0|201|" + itemId);
 
@@ -1474,13 +1679,7 @@ public class iConomy extends Plugin {
 
 	public boolean doSell(Player player, int itemId, int amount) {
 		Inventory bag = player.getInventory();
-		int needsAmount = 0;
-
-		if(this.globalStock) {
-			needsAmount = 1;
-		} else {
-			needsAmount = this.itemNeedsAmount("sell", cInt(itemId));
-		}
+		int needsAmount = this.itemNeedsAmount("sell", cInt(itemId));
 
 		if (!this.itemCan("sell", cInt(itemId), amount)) {
 			player.sendMessage(Colors.Rose + String.format(this.sellInvalidAmount, needsAmount));
@@ -1530,6 +1729,11 @@ public class iConomy extends Plugin {
 			int total = this.itemCost("sell", cInt(itemId), (sold/needsAmount), true);
 			String totalAmount = total + this.moneyName;
 
+			if(this.globalStock) {
+				total = sold*itemAmount;
+				totalAmount = total + this.moneyName;
+			}
+
 			// Send Message
 			player.sendMessage(Colors.LightGray + String.format(this.sellGiveAmount, sold, ((needsAmount > 1) ? needsAmount*amount : amount)));
 			player.sendMessage(Colors.Green + String.format(this.sellGive, totalAmount));
@@ -1550,6 +1754,9 @@ public class iConomy extends Plugin {
 
 				this.updateStock(cInt(itemId), stock);
 				this.updateWeight(cInt(itemId), weight);
+
+				if(debugging)
+					log.info("[iConomy Stock Report] Item: " + itemId + " Stock: " + stock + " Amount Added: " + amount);
 			}
 
 			log.info("[iConomy Shop] " + "Player " + player.getName() + " sold item [" + itemId + "] amount [" + amount + "] total [" + totalAmount + "].");
@@ -1581,11 +1788,11 @@ public class iConomy extends Plugin {
 		iData.setBalance(pdata2, i);
 
 		if (really && player2 != null) {
-			player2.sendMessage(Colors.Green + "You received " + amount + this.moneyName);
+			player2.sendMessage(this.moneyTag + String.format(this.moneyRecieve, amount + this.moneyName));
 			showBalance(pdata2, null, true);
 
 			if (player1 != null) {
-				player1.sendMessage(Colors.Green + amount + this.moneyName + " deposited into " + pdata2 + "'s account");
+				player1.sendMessage(this.moneyTag + String.format(this.moneyDeposited, amount + this.moneyName, pdata2));
 			}
 
 		}
@@ -1610,11 +1817,11 @@ public class iConomy extends Plugin {
 		iData.setBalance(pdata2, i);
 
 		if (really && player2 != null) {
-			player2.sendMessage(Colors.Green + amount + this.moneyName + " was deducted from your account.");
+			player2.sendMessage(this.moneyTag + String.format(this.moneyDeducted, amount + this.moneyName));
 			showBalance(pdata2, null, true);
 
 			if (player1 != null) {
-				player1.sendMessage(Colors.Green + amount + this.moneyName + " removed from " + pdata2 + "'s account");
+				player1.sendMessage(this.moneyTag + String.format(this.moneyRemoved, amount + this.moneyName, pdata2));
 			}
 
 		}
@@ -1633,12 +1840,14 @@ public class iConomy extends Plugin {
 		// Notify
 		if (notify) {
 			if (player != null) {
-				player.sendMessage(Colors.Green + "Your account has been reset.");
+				player.sendMessage(this.moneyTag + this.moneyReset);
 			}
 		}
 
 		// Notify the resetter and server regardless.
-		local.sendMessage(Colors.Rose + pdata + "'s account has been reset.");
+		local.sendMessage(this.moneyTag + String.format(this.moneyResetAlert, pdata));
+
+		// Logging
 		log.info("[iConomy Money] " + pdata + "'s account has been reset by " + local.getName());
 
 		if(debugging)
@@ -1656,13 +1865,13 @@ public class iConomy extends Plugin {
 
 		if (pdata1.equals(pdata2)) {
 			if(player1 != null)
-				player1.sendMessage(Colors.Rose + "You cannot send yourself money");
+				player1.sendMessage(this.moneyPaySelf);
 
 			if(debugging)
 				log.info("[iConomy Debugging] [" + pdata1 + "] [" + pdata2 + "] [" + amount + "] [#20344]");
 		} else if (amount > i) {
 			if(player1 != null)
-				player1.sendMessage(Colors.Rose + "You do not have enough money.");
+				player1.sendMessage(this.moneyNotEnough);
 
 			if(debugging)
 				log.info("[iConomy Debugging] [" + pdata1 + "] [" + pdata2 + "] [" + amount + "] [#20345]");
@@ -1677,10 +1886,10 @@ public class iConomy extends Plugin {
 
 			// Send messages
 			if(player1 != null)
-				player1.sendMessage(Colors.LightGray + "You have sent " + Colors.Green + amount + this.moneyName + Colors.LightGray + " to " + Colors.Green + pdata2);
+				player1.sendMessage(this.moneyTag + String.format(this.moneyPay, amount + this.moneyName, pdata2));
 
 			if(player2 != null)
-				player2.sendMessage(Colors.Green + pdata1 + Colors.LightGray + " has sent you " + Colors.Green + amount + this.moneyName);
+				player2.sendMessage(this.moneyTag + String.format(this.moneyPayFrom, pdata1, amount + this.moneyName));
 
 			// Log
 			this.shopLog("pay", pdata1 + "|"+pdata2+"|1|200|" + amount);
@@ -1706,9 +1915,9 @@ public class iConomy extends Plugin {
 		int i = iData.getBalance(name);
 		if (isMe) {
 			Player player = this.getPlayer(name);
-			player.sendMessage(Colors.LightGray + "Balance: " + Colors.Green + i + this.moneyName);
+			player.sendMessage(this.moneyTag + String.format(this.moneyBalance, i + this.moneyName));
 		} else {
-			local.sendMessage(Colors.LightGray + name + "'s Balance: " + Colors.Green + i + this.moneyName);
+			local.sendMessage(this.moneyTag + String.format(this.moneyBalancePlayer, name, i + this.moneyName));
 		}
 	}
 
@@ -2673,7 +2882,7 @@ public class iConomy extends Plugin {
 
 	public void signPush(Player player, String owner, int i, int amount, boolean isOwner, int price, Block blockClicked) {
 		if (!hasItems(player, i, amount)) {
-			player.sendMessage("You dont have enough" + this.itemName(cInt(i)));
+			player.sendMessage(String.format(this.signNotEnoughp, itemName(cInt(i))));
 			return;
 		}
 
@@ -2681,9 +2890,9 @@ public class iConomy extends Plugin {
 
 		if (amount + stock > this.signMaxAmount) {
 			if (isOwner) {
-				player.sendMessage("Sorry dude, your stock is full.");
+				player.sendMessage(this.signStockFull);
 			} else {
-				player.sendMessage("Sorry, " + owner + "s stock is currently full.");
+				player.sendMessage(String.format(this.signStockOwnerFull, owner));
 			}
 
 			this.shopLog("signs", player.getName() + "|"+ owner +"|0|200|" + i + "|"+stock+"|"+(stock+amount)+"|" + amount + "|" + price);
@@ -2702,8 +2911,8 @@ public class iConomy extends Plugin {
 				player.sendMessage(String.format(this.signStocked, amount, this.itemName(cInt(i))));
 			} else {
 				removeItems(player, i, amount);
-				this.debit(null, owner, price, true);
-				this.deposit(null, player.getName(), price, true);
+				this.debit(null, owner, price, false);
+				this.deposit(null, player.getName(), price, false);
 				player.sendMessage(String.format(this.signSold, amount, this.itemName(cInt(i)), price+this.moneyName));
 			}
 
@@ -2739,7 +2948,7 @@ public class iConomy extends Plugin {
 			}
 
 		} else {
-			player.sendMessage(owner + " does not have that item in stock");
+			player.sendMessage(String.format(this.signNotInStock, owner));
 		}
 	}
 
@@ -3881,62 +4090,63 @@ public class iConomy extends Plugin {
 							itemID = etc.getDataSource().getItem(split[1]);
 						}
 
-						if(itemID < 0) {
-							player.sendMessage(Colors.Rose + "Invalid item!");
-							return true;
-						}
-
 						if (!Item.isValidItem(itemID)) {
 							if(items.getKey(split[1]) != null) {
 								itemID = Integer.parseInt(items.getKey(split[1]).toString());
 							} else {
-								player.sendMessage(Colors.Rose + "Invalid item!");
+								player.sendMessage(p.shopInvalidItem);
 								return true;
 							}
 						}
 
-						if (itemID != 0) {
-							int bNA = p.itemNeedsAmount("buy", cInt(itemID));
-							int sNA = p.itemNeedsAmount("sell", cInt(itemID));
-
-							int buying = p.itemCost("buy", cInt(itemID), bNA, false);
-							int selling = p.itemCost("sell", cInt(itemID), sNA, false);
-
-							if(p.globalStock) {
-								bNA = 1;
-								sNA = 1;
-
-								buying = p.itemStockCost(cInt(itemID));
-								selling = p.itemStockSell(cInt(itemID));
-							}
-
-							if (buying != 0) {
-								if (bNA > 1) {
-									player.sendMessage(" " + Colors.Green + "Must be " + Colors.Green + "bought" + Colors.LightGray + " in bundles of " + Colors.Green + bNA + Colors.LightGray + " for " + Colors.Green + buying + p.moneyName + Colors.LightGray + ".");
-								} else {
-									player.sendMessage(Colors.LightGray + "Can be " + Colors.Green + "bought" + Colors.LightGray + " for " + Colors.Green + buying + p.moneyName + Colors.LightGray + ".");
-								}
-							} else {
-								player.sendMessage(Colors.Rose + "Currently not for purchasing.");
-							}
-
-							if (selling != 0) {
-								if (sNA > 1) {
-									player.sendMessage(Colors.LightGray + "Must be " + Colors.Green + "sold" + Colors.LightGray + " in bundles of " + Colors.Green + sNA + Colors.LightGray + " for " + Colors.Green + selling + p.moneyName + ".");
-								} else {
-									player.sendMessage(Colors.LightGray + "Can be " + Colors.Green + "sold" + Colors.LightGray + " for " + Colors.Green + selling + p.moneyName + Colors.LightGray + ".");
-								}
-							} else {
-								player.sendMessage(Colors.Rose + "Currently cannot be sold.");
-							}
-
-							return true;
-						} else {
-							player.sendMessage(Colors.Rose + "Usage: /shop [command|item|itemID] [item] [amount]");
-							player.sendMessage(Colors.Rose + "    Commands: list, buy, sell, help");
-							player.sendMessage(Colors.Rose + "Alt-Commands: -l, -b, -s, ?");
-							return true;
+						if(itemID < 1) {
+							player.sendMessage(p.shopInvalidItem); return true;
 						}
+
+						int bNA = p.itemNeedsAmount("buy", cInt(itemID));
+						int sNA = p.itemNeedsAmount("sell", cInt(itemID));
+						int buying = p.itemCost("buy", cInt(itemID), bNA, false);
+						int selling = p.itemCost("sell", cInt(itemID), sNA, false);
+
+						String itemName = itemName(cInt(itemID));
+
+						if(p.globalStock) {
+							buying = p.itemStockCost(cInt(itemID));
+							selling = p.itemStockSell(cInt(itemID));
+						}
+
+						// Data
+						player.sendMessage(p.shopTag + String.format(p.shopItemData, itemName, itemID));
+
+						if (buying != 0) {
+							if (bNA > 1) {
+								player.sendMessage(String.format(p.shopPurchaseBundle, bNA, buying + p.moneyName));
+							} else {
+								if(p.globalStock)
+									player.sendMessage(p.shopTag + String.format(p.shopPurchaseStock, buying + p.moneyName) + " " + String.format(p.shopStockItem, p.itemStock(cInt(itemID))));
+								else {
+									player.sendMessage(p.shopTag + String.format(p.shopPurchaseSingle, buying + p.moneyName));
+								}
+							}
+						} else {
+							player.sendMessage(p.shopPurchaseUnavailable);
+						}
+
+						if (selling != 0) {
+							if (sNA > 1) {
+								player.sendMessage(String.format(p.shopSellingBundle, sNA, selling + p.moneyName));
+							} else {
+								if(p.globalStock)
+									player.sendMessage(p.shopTag + String.format(p.shopSellingStock, selling + p.moneyName) + " " + String.format(p.shopStockItem, p.itemStock(cInt(itemID))));
+								else {
+									player.sendMessage(p.shopTag + String.format(p.shopSellingSingle, selling + p.moneyName));
+								}
+							}
+						} else {
+							player.sendMessage(p.shopSellingUnavailable);
+						}
+
+						return true;
 					}
 				}
 
@@ -3971,36 +4181,28 @@ public class iConomy extends Plugin {
 							itemID = etc.getDataSource().getItem(split[2]);
 						}
 
-						if(itemID < 0) {
-							player.sendMessage(Colors.Rose + "Invalid item!");
-							return true;
-						}
-
 						if (!Item.isValidItem(itemID)) {
 							if(items.getKey(split[2]) != null) {
 								itemID = Integer.parseInt(items.getKey(split[2]).toString());
 							} else {
-								player.sendMessage(Colors.Rose + "Invalid item!");
+								player.sendMessage(p.shopInvalidItem);
 								return true;
 							}
 						}
 
-						if (itemID != 0) {
-							int buying = p.itemNeedsAmount("buy", cInt(itemID));
-
-							if (buying != 0) {
-								p.doPurchase(player, itemID, 1);
-							} else {
-								player.sendMessage(Colors.Rose + "Item currently not for purchasing.");
-							}
-
-							return true;
-						} else {
-							player.sendMessage(Colors.Rose + "Usage: /shop [command|item|itemID] [item] [amount]");
-							player.sendMessage(Colors.Rose + "    Commands: buy, sell, help");
-							player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, ?");
-							return true;
+						if(itemID < 1) {
+							player.sendMessage(p.shopInvalidItem); return true;
 						}
+
+						int buying = p.itemNeedsAmount("buy", cInt(itemID));
+
+						if (buying != 0) {
+							p.doPurchase(player, itemID, 1);
+						} else {
+							player.sendMessage(p.shopPurchaseUnavailable);
+						}
+
+						return true;
 					} else if (split[1].equalsIgnoreCase("-s") || split[1].equalsIgnoreCase("sell")) {
 						int itemID = 0;
 
@@ -4015,7 +4217,7 @@ public class iConomy extends Plugin {
 						}
 
 						if(itemID < 0) {
-							player.sendMessage(Colors.Rose + "Invalid item!");
+							player.sendMessage(p.shopInvalidItem);
 							return true;
 						}
 
@@ -4023,7 +4225,7 @@ public class iConomy extends Plugin {
 							if(items.getKey(split[2]) != null) {
 								itemID = Integer.parseInt(items.getKey(split[2]).toString());
 							} else {
-								player.sendMessage(Colors.Rose + "Invalid item!");
+								player.sendMessage(p.shopInvalidItem);
 								return true;
 							}
 						}
@@ -4058,22 +4260,22 @@ public class iConomy extends Plugin {
 						}
 
 						if(itemID < 0) {
-							player.sendMessage(Colors.Rose + "Invalid item!");
+							player.sendMessage(p.shopInvalidItem);
 							return true;
 						}
 
 						if (!Item.isValidItem(itemID) && amount == 0) {
 							player.sendMessage(Colors.Rose + "Usage: /shop [command|item|itemID] [item] [amount]");
-							player.sendMessage(Colors.Rose + "    Commands: buy, sell, help");
-							player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, ?");
+							player.sendMessage(Colors.Rose + "    Commands: buy, sell, list, help");
+							player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, -l, ?");
 							return true;
 						} else if(!Item.isValidItem(itemID)) {
 							if(items.getKey(split[1]) != null) {
 								itemID = Integer.parseInt(items.getKey(split[1]).toString());
 							} else {
 								player.sendMessage(Colors.Rose + "Usage: /shop [command|item|itemID] [item] [amount]");
-								player.sendMessage(Colors.Rose + "    Commands: buy, sell, help");
-								player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, ?");
+								player.sendMessage(Colors.Rose + "    Commands: buy, sell, list, help");
+								player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, -l, ?");
 								return true;
 							}
 						}
@@ -4081,30 +4283,53 @@ public class iConomy extends Plugin {
 						if (itemID != 0) {
 							int bNA = p.itemNeedsAmount("buy", cInt(itemID));
 							int sNA = p.itemNeedsAmount("sell", cInt(itemID));
+							int buying = 0;
+							int selling = 0;
+							int totalBuying = 0;
+							int totalSelling = 0;
+							String itemName = itemName(cInt(itemID));
 
-							int buying = p.itemCost("buy", cInt(itemID), amount, false);
-							int selling = p.itemCost("sell", cInt(itemID), amount, false);
-							int totalBuying = p.itemCost("buy", cInt(itemID), amount, true);
-							int totalSelling = p.itemCost("sell", cInt(itemID), amount, true);
+							if(p.globalStock) {
+								buying = p.itemStockCost(cInt(itemID));
+								selling = p.itemStockSell(cInt(itemID));
+								totalBuying = buying*amount;
+								totalSelling = selling*amount;
+							} else {
+								buying = p.itemCost("buy", cInt(itemID), amount, false);
+								selling = p.itemCost("sell", cInt(itemID), amount, false);
+								totalBuying = p.itemCost("buy", cInt(itemID), amount, true);
+								totalSelling = p.itemCost("sell", cInt(itemID), amount, true);
+							}
+
+							// Data
+							player.sendMessage(p.shopTag + String.format(p.shopItemData, itemName, itemID));
 
 							if (buying != 0) {
 								if (bNA > 1) {
-									player.sendMessage(Colors.Green + amount + Colors.LightGray + " bundles will cost " + Colors.Green + totalBuying + p.moneyName + Colors.LightGray + ".");
+									player.sendMessage(p.shopTag + String.format(p.shopPurchaseAmountBundle, amount, totalBuying + p.moneyName));
 								} else {
-									player.sendMessage(Colors.Green + amount + Colors.LightGray + " will cost " + Colors.Green + totalBuying + p.moneyName + Colors.LightGray + ".");
+									if(p.globalStock)
+										player.sendMessage(p.shopTag + String.format(p.shopPurchaseAmountStock, itemName, totalBuying + p.moneyName) + " " + String.format(p.shopStockItem, p.itemStock(cInt(itemID))));
+									else {
+										player.sendMessage(p.shopTag + String.format(p.shopPurchaseAmountSingle, amount, totalBuying + p.moneyName));
+									}
 								}
 							} else {
-								player.sendMessage(Colors.Rose + "Invalid amount or not for purchasing!");
+								player.sendMessage(p.shopPurchaseUnavailable);
 							}
 
 							if (selling != 0) {
 								if (sNA > 1) {
-									player.sendMessage(Colors.Green + amount + Colors.LightGray + " bundles will sell for " + Colors.Green + totalSelling + p.moneyName + Colors.LightGray + ".");
+									player.sendMessage(p.shopTag + String.format(p.shopSellingAmountBundle, amount, totalSelling + p.moneyName));
 								} else {
-									player.sendMessage(Colors.Green + amount + Colors.LightGray + " can be sold for " + Colors.Green + totalSelling + p.moneyName + Colors.LightGray + ".");
+									if(p.globalStock)
+										player.sendMessage(p.shopTag + String.format(p.shopSellingAmountStock, itemName, totalBuying + p.moneyName) + " " + String.format(p.shopStockItem, p.itemStock(cInt(itemID))));
+									else {
+										player.sendMessage(p.shopTag + String.format(p.shopSellingAmountSingle, amount, totalSelling + p.moneyName));
+									}
 								}
 							} else {
-								player.sendMessage(Colors.Rose + "Invalid Amount or not for selling!");
+								player.sendMessage(p.shopSellingUnavailable);
 							}
 
 							return true;
@@ -4133,7 +4358,7 @@ public class iConomy extends Plugin {
 						}
 
 						if(itemID < 0) {
-							player.sendMessage(Colors.Rose + "Invalid item!");
+							player.sendMessage(p.shopInvalidItem);
 							return true;
 						}
 
@@ -4141,15 +4366,20 @@ public class iConomy extends Plugin {
 							if(items.getKey(split[2]) != null) {
 								itemID = Integer.parseInt(items.getKey(split[2]).toString());
 							} else {
-								player.sendMessage(Colors.Rose + "Invalid item!");
-								return true;
+								player.sendMessage(p.shopInvalidItem); return true;
 							}
 						}
 
-						int amount = Integer.parseInt(split[3]);
+						int amount = 0;
+
+						try {
+							amount = Integer.parseInt(split[3]);
+						} catch (NumberFormatException n) {
+							player.sendMessage(p.shopInvalidAmount); return true;
+						}
 
 						if (amount < 0 || amount == 0) {
-							player.sendMessage(Colors.Rose + "Invalid amount!");
+							player.sendMessage(p.shopInvalidAmount);
 							return true;
 						}
 
@@ -4159,7 +4389,7 @@ public class iConomy extends Plugin {
 							if (buying != 0) {
 								p.doPurchase(player, itemID, amount);
 							} else {
-								player.sendMessage(Colors.Rose + "Item currently not for purchasing.");
+								player.sendMessage(p.shopPurchaseUnavailable);
 							}
 
 							return true;
@@ -4202,7 +4432,7 @@ public class iConomy extends Plugin {
 						}
 
 						if(itemID < 0) {
-							player.sendMessage(Colors.Rose + "Invalid item!");
+							player.sendMessage(p.shopInvalidItem);
 							return true;
 						}
 
@@ -4210,15 +4440,14 @@ public class iConomy extends Plugin {
 							if(items.getKey(split[2]) != null) {
 								itemID = Integer.parseInt(items.getKey(split[2]).toString());
 							} else {
-								player.sendMessage(Colors.Rose + "Invalid item!");
-								return true;
+								player.sendMessage(p.shopInvalidItem); return true;
 							}
 						}
 
 						int amount = Integer.parseInt(split[3]);
 
 						if (amount < 0 || amount == 0) {
-							player.sendMessage(Colors.Rose + "Invalid amount!");
+							player.sendMessage(p.shopInvalidAmount);
 							return true;
 						}
 
@@ -4228,7 +4457,7 @@ public class iConomy extends Plugin {
 							if (selling != 0) {
 								p.doSell(player, itemID, amount);
 							} else {
-								player.sendMessage(Colors.Rose + "Item currently not for selling.");
+								player.sendMessage(p.shopSellingUnavailable);
 							}
 
 							return true;
@@ -4277,7 +4506,7 @@ public class iConomy extends Plugin {
 
 				if(p.signOwnUse){
 					if(p.ownSign(player.getName())+1 > p.canOwn(player.getName())){
-						log.info("[iConomy SS] Cannot create shop Own:"+p.ownSign(player.getName())+" Can:"+p.canOwn(player.getName()));
+						log.info("[iConomy Sign Shop] Cannot create shop Own:"+p.ownSign(player.getName())+" Can:"+p.canOwn(player.getName()));
 						return false;
 					}
 				}
@@ -4344,7 +4573,7 @@ public class iConomy extends Plugin {
 				return false;
 			}
 
-			if(!p.globalSigns)
+			if (!p.globalSigns)
 				return false;
 
 			if (!p.can(player, "signBuy") || !p.can(player, "signSell") || !p.can(player, "trade")) {
@@ -4412,7 +4641,7 @@ public class iConomy extends Plugin {
 							i++;
 						}
 
-						player.sendMessage("Â§6[Trade]Â§f Trading: " + name + " - Amount: " + amount + ".");
+						player.sendMessage(p.tradeTag + String.format(p.tradeItemAmount, name, amount));
 
 						//Calculates the amount of gold (or the currency) to give the player
 						if (factor != 0) {
@@ -4424,7 +4653,7 @@ public class iConomy extends Plugin {
 								if(itemId != 0)
 									player.giveItem(itemId, give * toGive);
 								else {
-									p.deposit(null, player.getName(), give * toGive, true);
+									p.deposit(null, player.getName(), give * toGive, false);
 								}
 
 								//Removes the content's of the chest and add the remainder, if any
@@ -4434,35 +4663,35 @@ public class iConomy extends Plugin {
 
 								//Let you and everybody know what happened...
 								if(itemId != 0)
-									player.sendMessage("§6[Trade]§f You received " + (give * toGive) + " " + p.itemName(cInt(itemId)) + ".");
+									player.sendMessage(p.tradeTag + String.format(p.tradeMoneyRecieve, (give * toGive), p.itemName(cInt(itemId))));
 								else {
-									player.sendMessage("§6[Trade]§f You received " + (give * toGive) + p.moneyName + ".");
+									player.sendMessage(p.tradeTag + String.format(p.tradeMoneyRecieve, (give * toGive) + p.moneyName));
 								}
 
-								player.sendMessage("§6[Trade]§f There are " + remainder + " " + name + " left in the chest.");
+								player.sendMessage(p.tradeTag + String.format(p.tradeItemRemainder, remainder, name));
 
 								if(p.globalTradeMessage) {
 									if(itemId != 0)
-										p.broadcast("§6[Trade] " + player.getName() + " got " + (give * toGive) + " " + p.itemName(cInt(itemId)) + " from trade.");
+										p.broadcast(p.tradeTag + String.format(p.tradeGlobalItemRecieve, player.getName(), (give * toGive), p.itemName(cInt(itemId))));
 									else {
-										p.broadcast("§6[Trade] " + player.getName() + " got " + (give * toGive) + p.moneyName + " from trade.");
+										p.broadcast(p.tradeTag + String.format(p.tradeGlobalMoneyRecieve, player.getName(), (give * toGive) + p.moneyName));
 									}
 								}
 								p.shopLog("trade", player.getName() +"|1|200|"+item.getItemId()+"|"+amount+"|"+(give * toGive)+"|"+remainder);
 							} else {
 								p.shopLog("trade", player.getName() +"|0|201|"+item.getItemId()+"|"+amount+"|"+factor);
-								player.sendMessage("§6[Trade]§f Not enough items (" + amount + "/" + factor + ") for trade.");
+								player.sendMessage(p.tradeTag + String.format(p.tradeItemNotEnough, amount, factor));
 							}
 						} else {
 							p.shopLog("trade", player.getName() +"|0|202|"+item.getItemId());
-							player.sendMessage("§6[Trade]§f This item cannot be used for trade.");
+							player.sendMessage(p.tradeTag + "This item cannot be used for trade.");
 						}
 
 						//Update the chest content
 						chest.update();
 					} else {
 							p.shopLog("trade", player.getName() +"|0|204");
-						player.sendMessage("§6[Trade]§f Add the items into the first slot.");
+						player.sendMessage(p.tradeTag + p.tradeItemFirstSlot);
 					}
 
 					return false;
@@ -4471,7 +4700,7 @@ public class iConomy extends Plugin {
 				// Trade Recursive Information~
 				if((sign.getText(1).equalsIgnoreCase("[rates]"))) {
 					Map traders;
-					player.sendMessage("§6[Trade]§f Trading rates are currently:");
+					player.sendMessage(p.tradeTag + p.tradeRates);
 
 					try {
 						traders = p.trades.returnMap();
@@ -4484,9 +4713,9 @@ public class iConomy extends Plugin {
 						String tradeData[] = data.split(",");
 
 						if(tradeData.length == 4)
-							player.sendMessage("    §6-§f " + tradeData[1] + "x " + (String) key + " for " + tradeData[2] + " " + p.itemName(tradeData[3]));
+							player.sendMessage(p.tradeTag + String.format(p.tradeRatesForItem, tradeData[1], (String)key, tradeData[2], p.itemName(tradeData[3])));
 						else {
-							player.sendMessage("    §6-§f " + tradeData[1] + "x " + (String) key + " for " + tradeData[2] + p.moneyName);
+							player.sendMessage(p.tradeTag + String.format(p.tradeRatesForItem, tradeData[1], (String)key, tradeData[2] + p.moneyName));
 						}
 					}
 				}
@@ -4564,60 +4793,96 @@ public class iConomy extends Plugin {
 			return false;
 		}
 
-		public boolean onBlockDestroy(Player player, Block block) {
+		public void onArmSwing(Player player) {
 
-			if(!p.globalSigns)
-				return false;
-
-			ComplexBlock theblock = etc.getServer().getComplexBlock(block.getX(), block.getY(), block.getZ());
-
-			if (!(theblock instanceof Sign)) {
-				return false;
-			} else {
-				Sign sign = (Sign) theblock;
-
-				if (!(sign.getText(1).equalsIgnoreCase("sell") || sign.getText(1).equalsIgnoreCase("buy"))) {
-					return false;
+		    if (player.getItemInHand() == -1) {
+				if (!p.can(player, "signBuy") || !p.can(player, "signSell") || !p.can(player, "trade")) {
+					return;
 				}
 
-				String[] split = sign.getText(2).split(" ");
-				int i = Integer.parseInt(split[0]);
+				HitBlox hb = new HitBlox(player);
+				Block block = hb.getTargetBlock();
 
-				if(!p.existsSign(sign.getText(0), i)) {
-					return false;
-				}
-				
-				if(block.getStatus() == 3){
-					p.deleteSign(sign.getText(0), i);
-					p.shopLog("signs", player.getName() + "|"+ sign.getText(0) +"|1|202");
-					sign.setText(0, ""); sign.setText(1, ""); sign.setText(2, ""); sign.setText(3, "");
-					sign.update();
-					return false;
+				if(!p.globalSigns)
+					return;
+
+				ComplexBlock theblock = etc.getServer().getComplexBlock(block.getX(), block.getY(), block.getZ());
+
+				if (!(theblock instanceof Sign)) {
+					return;
+				} else {
+					Sign sign = (Sign) theblock;
+
+					if (!(sign.getText(1).equalsIgnoreCase("sell") || sign.getText(1).equalsIgnoreCase("buy"))) {
+						return;
+					}
+
+					String[] split = sign.getText(2).split(" ");
+					int i = Integer.parseInt(split[0]);
+
+					if(!p.existsSign(sign.getText(0), i)) {
+						return;
+					}
+
+					if(sign.getText(0).equalsIgnoreCase(player.getName())){
+						int stock = p.signCurStock(sign.getText(0), i);
+
+						if(sign.getText(0).equals(player.getName()) && stock != 0 && stock > 1) {
+							// Create chest
+							Block below = etc.getServer().getBlockAt(sign.getX(), sign.getY()-1, sign.getZ());
+							below.setType(54);
+							below.update();
+
+							// Grab chest
+							ComplexBlock blockBelow = etc.getServer().getComplexBlock(below.getX(), below.getY(), below.getZ());
+
+							if (!(blockBelow instanceof Chest)) {
+								log.info("[iConomy Fault] Attempted to create stock chest failed! " + player.getName());
+							} else {
+								Chest chestBelow = (Chest) blockBelow;
+								chestBelow.addItem(new Item(i, stock, 0));
+								chestBelow.update();
+
+								if(debugging)
+									log.info("[iConomy Sign Shops] Sign deleted, items placed in chest.");
+							}
+						}
+
+						if(debugging)
+							log.info("[iConomy Sign Shops] Either no stock found or not owner of sign.");
+
+						p.deleteSign(sign.getText(0), i);
+						p.shopLog("signs", player.getName() + "|"+ sign.getText(0) +"|1|202");
+						sign.setText(0, ""); sign.setText(1, ""); sign.setText(2, ""); sign.setText(3, "");
+						sign.update();
+
+						return;
+					} else {
+						return;
+					}
 				}
 			}
-
-			return false;
 		}
 	}
 
 	class ValueComparator implements Comparator {
 
-	  Map base;
-	  public ValueComparator(Map base) {
-	      this.base = base;
-	  }
+		Map base;
+		public ValueComparator(Map base) {
+			this.base = base;
+		}
 
-	  public int compare(Object a, Object b) {
-		int ax = Integer.parseInt((String)base.get(a));
-		int bx = Integer.parseInt((String)base.get(b));
+		public int compare(Object a, Object b) {
+			int ax = Integer.parseInt((String)base.get(a));
+			int bx = Integer.parseInt((String)base.get(b));
 
-	    if(ax < bx) {
-	      return 1;
-	    } else if(ax == bx) {
-	      return 0;
-	    } else {
-	      return -1;
-	    }
-	  }
+			if(ax < bx) {
+				return 1;
+			} else if(ax == bx) {
+				return 0;
+			} else {
+				return -1;
+			}
+		}
 	}
 }
