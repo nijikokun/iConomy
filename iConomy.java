@@ -114,12 +114,12 @@ public class iConomy extends Plugin {
 	private String driver, user, pass, db;
 
 	// Versioning
-	private String   version = "0.9.5";
-	private String  sversion = "0.8.5";
+	private String   version = "0.9.5.1";
+	private String  sversion = "1.0";
 	private String  aversion = "0.5";
-	private String  lversion = "0.3";
-	private String ssversion = "0.4";
-	private String  tversion = "0.2";
+	private String  lversion = "0.5";
+	private String ssversion = "0.5";
+	private String  tversion = "0.5";
 
 	public iConomy() {
 		this.settings = null;
@@ -1297,9 +1297,9 @@ public class iConomy extends Plugin {
 								available.add(String.format(this.shopSellingListStock, name, cost+this.moneyName) + " " + String.format(this.shopStockItem, stock));
 							else {
 								if(bundle)
-									available.add(String.format(this.shopSellingAmountBundle, name, cost + this.moneyName, perBundle));
+									available.add(String.format(this.shopSellingListBundle, name, cost + this.moneyName, perBundle));
 								else {
-									available.add(String.format(this.shopSellingAmountSingle, name, cost + this.moneyName));
+									available.add(String.format(this.shopSellingListSingle, name, cost + this.moneyName));
 								}
 							}
 						}
@@ -1369,9 +1369,9 @@ public class iConomy extends Plugin {
 					available.add(String.format(this.shopSellingListStock, name, cost+this.moneyName) + " " + String.format(this.shopStockItem, stock));
 				else {
 					if(bundle)
-						available.add(String.format(this.shopSellingAmountBundle, name, cost + this.moneyName, perBundle));
+						available.add(String.format(this.shopSellingListBundle, name, cost + this.moneyName, perBundle));
 					else {
-						available.add(String.format(this.shopSellingAmountSingle, name, cost + this.moneyName));
+						available.add(String.format(this.shopSellingListSingle, name, cost + this.moneyName));
 					}
 				}
 			}
@@ -1464,9 +1464,9 @@ public class iConomy extends Plugin {
 								available.add(String.format(this.shopPurchaseListStock, name, cost+this.moneyName) + " " + String.format(this.shopStockItem, stock));
 							else {
 								if(bundle)
-									available.add(String.format(this.shopPurchaseBundle, name, cost+this.moneyName, perBundle));
+									available.add(String.format(this.shopPurchaseListBundle, name, cost+this.moneyName, perBundle));
 								else {
-									available.add(String.format(this.shopPurchaseSingle, name, cost+this.moneyName));
+									available.add(String.format(this.shopPurchaseListSingle, name, cost+this.moneyName));
 								}
 							}
 						}
@@ -1532,9 +1532,9 @@ public class iConomy extends Plugin {
 					available.add(String.format(this.shopPurchaseListStock, name, cost+this.moneyName) + " " + String.format(this.shopStockItem, stock));
 				else {
 					if(bundle)
-						available.add(String.format(this.shopPurchaseBundle, name, cost+this.moneyName, perBundle));
+						available.add(String.format(this.shopPurchaseListBundle, name, cost+this.moneyName, perBundle));
 					else {
-						available.add(String.format(this.shopPurchaseSingle, name, cost+this.moneyName));
+						available.add(String.format(this.shopPurchaseListSingle, name, cost+this.moneyName));
 					}
 				}
 
@@ -1620,7 +1620,7 @@ public class iConomy extends Plugin {
 			if(this.globalStock) {
 				total = itemAmount*amount;
 			} else {
-				itemAmount = this.itemCost("buy", cInt(itemId), amount, true);
+				total = this.itemCost("buy", cInt(itemId), amount, true);
 			}
 
 			String totalAmount = total + this.moneyName;
@@ -1749,8 +1749,8 @@ public class iConomy extends Plugin {
 				int stock = itemStock(cInt(itemId));
 				double weight = itemWeight(cInt(itemId));
 
-				stock += amount;
-				weight -= amount;
+				stock += sold;
+				weight -= sold;
 
 				this.updateStock(cInt(itemId), stock);
 				this.updateWeight(cInt(itemId), weight);
@@ -4576,10 +4576,6 @@ public class iConomy extends Plugin {
 			if (!p.globalSigns)
 				return false;
 
-			if (!p.can(player, "signBuy") || !p.can(player, "signSell") || !p.can(player, "trade")) {
-				return false;
-			}
-
 			ComplexBlock theblock = etc.getServer().getComplexBlock(blockClicked.getX(), blockClicked.getY(), blockClicked.getZ());
 
 			if (!(theblock instanceof Sign)) {
@@ -4588,7 +4584,7 @@ public class iConomy extends Plugin {
 				Sign sign = (Sign) theblock;
 
 				// Trading
-				if(sign.getText(1).equalsIgnoreCase("[trade]")) {
+				if(sign.getText(1).equalsIgnoreCase("[trade]") && p.can(player, "trade")) {
 					Chest chest = null;
 					Item item = null;
 					Map traders = null;
@@ -4720,6 +4716,10 @@ public class iConomy extends Plugin {
 					}
 				}
 
+				if ((!p.can(player, "signBuy") || !p.can(player, "signSell"))) {
+					return false;
+				}
+
 				// Selling / Buying
 				if (!(sign.getText(1).equalsIgnoreCase("sell") || sign.getText(1).equalsIgnoreCase("buy"))) {
 					return false;
@@ -4796,14 +4796,17 @@ public class iConomy extends Plugin {
 		public void onArmSwing(Player player) {
 
 		    if (player.getItemInHand() == -1) {
-				if (!p.can(player, "signBuy") || !p.can(player, "signSell") || !p.can(player, "trade")) {
+				if (!p.can(player, "signBuy") || !p.can(player, "signSell")) {
 					return;
 				}
+
+				if(!p.globalSigns)
+					return;
 
 				HitBlox hb = new HitBlox(player);
 				Block block = hb.getTargetBlock();
 
-				if(!p.globalSigns)
+				if(hb == null || block == null)
 					return;
 
 				ComplexBlock theblock = etc.getServer().getComplexBlock(block.getX(), block.getY(), block.getZ());
