@@ -19,6 +19,13 @@ import java.sql.*;
 import java.util.Arrays;
 import java.util.HashMap;
 
+
+ /*
+  * iConomy
+  *
+  * @author Nijiko
+  * @copyright CC Nijikokun / DarkGrave, Aslyum Corporation LLC
+  */
 public class iConomy extends Plugin {
 	protected static final Logger log = Logger.getLogger("Minecraft");
 	private Listener l = new Listener(this);
@@ -114,7 +121,7 @@ public class iConomy extends Plugin {
 	private String driver, user, pass, db;
 
 	// Versioning
-	private String   version = "0.9.5.1";
+	private String   version = "0.9.5.2";
 	private String  sversion = "1.0";
 	private String  aversion = "0.5";
 	private String  lversion = "0.5";
