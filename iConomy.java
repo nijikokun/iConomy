@@ -4116,8 +4116,8 @@ public class iConomy extends Plugin {
 					return true;
 				}
 
-				if ((split.length < 3)) {
-					if(!split[1].equalsIgnoreCase("?") || !split[1].equalsIgnoreCase("help") || !split[1].equalsIgnoreCase("-p") || !split[1].equalsIgnoreCase("position") || !split[1].equalsIgnoreCase("-up") || !split[1].equalsIgnoreCase("unposition")) {
+				if ((split.length < 5)) {
+					if(!split[1].equalsIgnoreCase("?") && !split[1].equalsIgnoreCase("help") && !split[1].equalsIgnoreCase("-p") && !split[1].equalsIgnoreCase("position") && !split[1].equalsIgnoreCase("-up") && !split[1].equalsIgnoreCase("unposition")) {
 						if(p.shopPosition.contains(";")) {
 							if(!p.nearStore(player)) {
 								player.sendMessage(p.shopTag + p.shopNotInside);
