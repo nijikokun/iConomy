@@ -303,27 +303,6 @@ public final class iProperty {
         return false;
     }
 
-    public boolean removesKey(String var) {
-        for (String line : this.lines) {
-            if (line.trim().length() == 0) {
-                continue;
-            }
-            if (line.charAt(0) == '#') {
-                continue;
-            }
-
-            int delimPosition = line.indexOf('=');
-
-            String key = line.substring(0, delimPosition).trim();
-
-            if (key.equals(var)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     public String getProperty(String var) {
         for (String line : this.lines) {
             if (line.trim().length() == 0) {
@@ -345,9 +324,30 @@ public final class iProperty {
         return "";
     }
 
-    public void removeKey(String key) {
-        this.removesKey(key);
-	save();
+    public void removeKey(String var) {
+        for (String line : this.lines) {
+            if (line.trim().length() == 0) {
+                continue;
+            }
+
+            if (line.charAt(0) == '#') {
+                continue;
+            }
+
+			if(line.contains("=")) {
+                int delimPosition = line.indexOf('=');
+
+                String key = line.substring(0, delimPosition).trim();
+
+                if (key.equals(var)) {
+                    this.lines.remove(line);
+                }
+			} else {
+				continue;
+			}
+        }
+
+		save();
     }
 
     /**
