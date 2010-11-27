@@ -162,7 +162,11 @@ public final class iData implements Serializable {
 			}
 		} else {
 			// To work with plugins we must do this.
-			accounts.load();
+			try {
+				accounts.load();
+			} catch (IOException ex) {
+				log.severe("[iConomy] Unable to reload balances.");
+			}
 
 			// Return the balance
 			return (hasBalance(playerName)) ? accounts.getInt(playerName) : accounts.getInt(playerName, startingBalance);

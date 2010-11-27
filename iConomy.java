@@ -39,11 +39,12 @@ public class iConomy extends Plugin {
 	// Property Files
 	private iProperty settings, prizes, buying, selling, auctions, auctioner, itemNames, sign, signOwners, signLocation, trades, stocks;
 
-	// Hashmaps
+	// Lists
 	private Map<String, String> hashPrizes;
 	static HashMap<String, Long> lastClick = new HashMap<String, Long>();
 	static HashMap<String, Double> itemWeight = new HashMap<String, Double>();
 	static HashMap<String, Integer> itemStock = new HashMap<String, Integer>();
+	static ArrayList<String> inShop = new ArrayList<String>();
 
 	// Hashmaps for items
 	public static BidiMap items = new TreeBidiMap();
@@ -61,10 +62,15 @@ public class iConomy extends Plugin {
 
 	// Permissions
 	public String canPay, canCredit, canDebit, canReset, canRank, canTop, canView, canSell, canBuy, canAuction, canBid, canEnd, canLottery, canSign, canSignSell, canSignBuy;
-	public String canTrade;
+	public String canTrade, canPosition;
 
 	// Globals
 	public boolean globalAuction, globalShop, physicalShop, globalLottery, globalSigns, globalStock, globalTrade, globalTradeMessage;
+
+	// Shop Data
+	public String shopPosition;
+	public int shopDistance;
+	public boolean shopGreet;
 
 	// Auction settings
 	public Timer auctionTimer = new Timer();
@@ -92,7 +98,8 @@ public class iConomy extends Plugin {
 	public String shopPurchaseUnavailable, shopPurchaseListStart, shopPurchaseListBundle, shopPurchaseListSingle, shopPurchaseListStock, shopSellingBundle;
 	public String shopSellingSingle, shopSellingStock, shopSellingAmountBundle, shopSellingAmountSingle, shopSellingAmountStock;
 	public String shopSellingUnavailable, shopSellingListStart, shopSellingListBundle, shopSellingListSingle, shopSellingListStock,shopItemData;
-	public String shopStockItem, shopStockLow, shopInvalidItem, shopInvalidAmount, shopPurchaseNoItems, shopSellingNoItems, shopInvalidPage;
+	public String shopStockItem, shopStockLow, shopInvalidItem, shopInvalidAmount, shopPurchaseNoItems, shopSellingNoItems, shopInvalidPage, shopNotInside, shopWelcome,shopGoodbye;
+	public String shopSetPosition, shopUnSetPosition;
 
 	// Trade
 	public String tradeTag, tradeItemAmount, tradeItemRecieve, tradeItemRemainder, tradeMoneyRecieve, tradeGlobalItemRecieve, tradeGlobalMoneyRecieve;
@@ -121,8 +128,8 @@ public class iConomy extends Plugin {
 	private String driver, user, pass, db;
 
 	// Versioning
-	private String   version = "0.9.5.2";
-	private String  sversion = "1.0";
+	private String   version = "0.9.5.4";
+	private String  sversion = "1.1";
 	private String  aversion = "0.5";
 	private String  lversion = "0.5";
 	private String ssversion = "0.5";
@@ -178,6 +185,7 @@ public class iConomy extends Plugin {
 		etc.getLoader().addListener(PluginLoader.Hook.BLOCK_CREATED, l, this, PluginListener.Priority.HIGH);
 		etc.getLoader().addListener(PluginLoader.Hook.ARM_SWING, l, this, PluginListener.Priority.MEDIUM);
 		etc.getLoader().addListener(PluginLoader.Hook.COMPLEX_BLOCK_CHANGE, l, this, PluginListener.Priority.MEDIUM);
+		etc.getLoader().addListener(PluginLoader.Hook.PLAYER_MOVE, l, this, PluginListener.Priority.MEDIUM);
 	}
 
 	public void disable() {
@@ -203,6 +211,9 @@ public class iConomy extends Plugin {
 
 		if (this.auctionTimer != null)
 			this.auctionTimer.cancel();
+
+		if (this.decayer != null)
+			this.decayer.cancel();
 
 		log.info("[iConomy v" + this.version + "] Plugin Disabled.");
 	}
@@ -265,6 +276,11 @@ public class iConomy extends Plugin {
 				player.sendMessage(Colors.Rose + "/shop sell <i> - Sell 1 item");
 				player.sendMessage(Colors.Rose + "/shop sell <i> <a> - Sell multiple items");
 			}
+			
+			if (this.can(player, "position")) {
+				player.sendMessage(Colors.Rose + "/shop position - Sets the global shop to this location only.");
+				player.sendMessage(Colors.Rose + "/shop unposition - Unsets the global shop from being static.");
+			}
 
 			player.sendMessage(Colors.Rose + "/shop help|? - Displays this.");
 		} else if (type.equals("auction")) {
@@ -316,7 +332,7 @@ public class iConomy extends Plugin {
 		this.globalSigns = this.settings.getBoolean("use-signs", true);
 		this.globalTrade = this.settings.getBoolean("use-trade", true);
 		this.globalTradeMessage = this.settings.getBoolean("use-trade-global", true);
-		this.globalStock = this.settings.getBoolean("use-stock", true);
+		this.globalStock = this.settings.getBoolean("use-stock", false);
 
 		// Debugging
 		debugging = this.settings.getBoolean("debugging", false);
@@ -348,6 +364,13 @@ public class iConomy extends Plugin {
 			this.signWaitAmount = this.settings.getInt("sign-wait-amount", 2);
 		}
 
+		// Shop
+		if(this.globalShop) {
+			this.shopGreet = this.settings.getBoolean("shop-greet", true);
+			this.shopPosition = this.settings.getString("shop-position", "");
+			this.shopDistance = this.settings.getInt("shop-distance", 20);
+		}
+
 		// Global Supply / Demand
 		if(this.globalStock) {
 			this.decay = this.settings.getDouble("shop-decay", 0.86234);
@@ -373,6 +396,7 @@ public class iConomy extends Plugin {
 		this.canSignBuy = this.settings.getString("can-sign-shop-buy", "*");
 		this.canSignSell = this.settings.getString("can-sign-shop-sell", "*");
 		this.canTrade = this.settings.getString("can-trade", "*");
+		this.canPosition = this.settings.getString("can-position", "*");
 
 		// Buying / Selling logging
 		this.logPay = this.settings.getBoolean("log-pay", false);
@@ -383,7 +407,7 @@ public class iConomy extends Plugin {
 		this.logTrade = this.settings.getBoolean("log-trade", false);
 
 		// Controls the global [Money] template
-		this.moneyTag = this.settings.getString("money-tag", "[Money]");
+		this.moneyTag = this.settings.getString("money-tag", "[Money] ");
 		this.moneyRecieve = this.settings.getString("money-recieve","You recieved %1$s.");
 		this.moneyDeposited = this.settings.getString("money-deposited", "%1$s deposited into %2$s's account.");
 		this.moneyRemoved = this.settings.getString("money-removed", "%1$s removed from %2$s's account.");
@@ -413,7 +437,7 @@ public class iConomy extends Plugin {
 
 		// Controls the global [Lottery] template
 		if(this.globalLottery) {
-			this.lotteryTag = this.settings.getString("lottery-tag", "[Lottery]");
+			this.lotteryTag = this.settings.getString("lottery-tag", "[Lottery] ");
 			this.lotteryNotEnough = this.settings.getString("lottery-not-enough", "Sorry, you do not have enough to buy a ticket!");
 			this.lotteryWinner = this.settings.getString("lottery-winner", "Congratulations %1$s won %2$d %3$s in the lottery!");
 			this.lotteryLoser = this.settings.getString("lottery-loser", "The lady looks at you and shakes her head. Try Again!.");
@@ -451,7 +475,7 @@ public class iConomy extends Plugin {
 
 		// Controls the global [Trade] template
 		if(this.globalTrade) {
-			this.tradeTag = this.settings.getString("trade-tag", "[Trade]");
+			this.tradeTag = this.settings.getString("trade-tag", "[Trade] ");
 			this.tradeItemAmount = this.settings.getString("trade-item-amount","Trading: %1$s - Amount: %2$d.");
 			this.tradeItemRecieve = this.settings.getString("trade-item-recieve", "You received %1$d %2$s.");
 			this.tradeItemRemainder = this.settings.getString("trade-item-remainder", "There are %1$d %2$s left in the chest.");
@@ -468,10 +492,10 @@ public class iConomy extends Plugin {
 
 		// Controls the global [Shop] template
 		if(this.globalShop) {
-			this.shopTag = this.settings.getString("shop-tag", "[Shop]");
+			this.shopTag = this.settings.getString("shop-tag", "[Shop] ");
 			this.shopInvalidItem = this.settings.getString("shop-invalid-item", "Invalid Item!");
 			this.shopInvalidAmount = this.settings.getString("shop-invalid-amount", "Invalid amount specified!");
-			this.shopItemData = this.settings.getString("shop-item-data", "Item: %1$s [# %1$d] Details:");
+			this.shopItemData = this.settings.getString("shop-item-data", "Item: %1$s [# %2$d] Details:");
 			this.shopPurchaseBundle = this.settings.getString("shop-purchase-bundle", "Must be bought in bundles of %1$d for %2$s.");
 			this.shopPurchaseSingle = this.settings.getString("shop-purchase-single", "Can be bought for %1$s per item.");
 			this.shopPurchaseStock = this.settings.getString("shop-purchase-stock", "Currently flux is at %1$s per item.");
@@ -499,6 +523,11 @@ public class iConomy extends Plugin {
 			this.shopStockItem = this.settings.getString("shop-stock-item", "Current Stock: %1$d");
 			this.shopStockLow = this.settings.getString("shop-stock-low", "Currently stock on that item is low!");
 			this.shopInvalidPage = this.settings.getString("shop-invalid-page", "Not a valid page number.");
+			this.shopWelcome = this.settings.getString("shop-welcome", "Hello there %1$s, welcome to our shop!");
+			this.shopGoodbye = this.settings.getString("shop-goodbye", "Thanks for shopping with us!");
+			this.shopNotInside = this.settings.getString("shop-not-inside", "You must be inside the shop to do that!");
+			this.shopSetPosition = this.settings.getString("shop-position-set", "Shop has been set to the position: %1$fx, %2$fz!");
+			this.shopUnSetPosition = this.settings.getString("shop-position-unset", "Shop is once again globally useable!");
 		}
 
 		// To be added
@@ -711,23 +740,51 @@ public class iConomy extends Plugin {
 
 		// Setup stock / weight if needed
 		if(this.globalStock){
-			Map<String,String> stocked = null;
+			if(this.mysql) {
+				Connection conn = null;
+				PreparedStatement ps = null;
+				ResultSet rs = null;
+				int i = 0;
 
-			try {
-				stocked = this.stocks.returnMap();
-			} catch (Exception ex) {
-				log.info("Invalid stock list!");
-			}
+				try {
+					conn = iData.MySQL();
 
-			for(String item : stocked.keySet()) {
-				String data = (String) stocked.get(item);
-				String[] sData = data.split(";");
+					ps = conn.prepareStatement("SELECT * FROM iBuy");
 
-				int stock = Integer.parseInt(sData[0]);
-				double weight = Double.parseDouble(sData[1]);
+					rs = ps.executeQuery();
 
-				itemWeight.put(String.valueOf(item), weight);
-				itemStock.put(String.valueOf(item), stock);
+					while(rs.next()) {
+						itemWeight.put(String.valueOf(rs.getInt("id")), rs.getDouble("weight"));
+						itemStock.put(String.valueOf(rs.getInt("id")), rs.getInt("stock"));
+					}
+				} catch (SQLException ex) {
+					log.severe("[iConomy Listing] Unable to count item list!");
+				} finally {
+					try {
+						if (ps != null) { ps.close(); }
+						if (rs != null) { rs.close(); }
+						if (conn != null) { conn.close(); }
+					} catch (SQLException ex) { }
+				}
+			} else {
+				Map<String,String> stocked = null;
+
+				try {
+					stocked = this.stocks.returnMap();
+				} catch (Exception ex) {
+					log.info("Invalid stock list!");
+				}
+
+				for(String item : stocked.keySet()) {
+					String data = (String) stocked.get(item);
+					String[] sData = data.split(";");
+
+					int stock = Integer.parseInt(sData[0]);
+					double weight = Double.parseDouble(sData[1]);
+
+					itemWeight.put(String.valueOf(item), weight);
+					itemStock.put(String.valueOf(item), stock);
+				}
 			}
 		}
 
@@ -946,6 +1003,17 @@ public class iConomy extends Plugin {
 		}
 	}
 
+	/* Shop Positioning */
+	public boolean nearStore(Player player) {
+		String[] positions = this.shopPosition.split(";");
+		double x = player.getX();
+		double z = player.getZ();
+		double a = Double.valueOf(positions[0]);
+		double b = Double.valueOf(positions[1]);
+
+		return (((int)Math.sqrt((a-x)*(a-x)+(b-z) *(b-z))) < this.shopDistance) ? true : false;
+	}
+
 	/* Shop Item Functions */
 	public int itemNeedsAmount(String type, String itemId) {
 		if (this.mysql) {
@@ -972,12 +1040,7 @@ public class iConomy extends Plugin {
 
 						return rs.getInt("perbundle");
 					} else {
-						if (rs.getInt("cost") == 0) {
-							return 0;
-						} else {
-
-							return 1;
-						}
+						return (rs.getInt("cost") == 0) ? 0 : 1;
 					}
 				} else {
 					return 0;
@@ -1022,7 +1085,6 @@ public class iConomy extends Plugin {
 	public boolean itemCan(String type, String itemId, int amount) {
 		int itemAmount = this.itemNeedsAmount(type, itemId);
 
-		// Maximum
 		if (amount > 6400) {
 			return false;
 		}
@@ -1030,11 +1092,7 @@ public class iConomy extends Plugin {
 		if (itemAmount == 0) {
 			return false;
 		} else if (itemAmount > 1) {
-			if ((amount * itemAmount) < 6400) {
-				return true;
-			} else {
-				return false;
-			}
+			return ((amount * itemAmount) < 6400) ? true : false;
 		} else {
 			return true;
 		}
@@ -1051,11 +1109,13 @@ public class iConomy extends Plugin {
 
 			try {
 				conn = iData.MySQL();
+
 				if(type.equals("buy")) {
 					ps = conn.prepareStatement("SELECT cost FROM iBuy WHERE id = ? LIMIT 1");
 				} else {
 					ps = conn.prepareStatement("SELECT cost FROM iSell WHERE id = ? LIMIT 1");
 				}
+
 				ps.setInt(1, Integer.parseInt(itemId));
 				rs = ps.executeQuery();
 
@@ -1064,14 +1124,8 @@ public class iConomy extends Plugin {
 						return 0;
 					}
 
-					// Settings
 					cost = rs.getInt("cost");
-
-					if (total) {
-						return cost*amount;
-					} else {
-						return cost;
-					}
+					return (total) ? cost*amount : cost;
 				} else {
 					return 0;
 				}
@@ -1106,19 +1160,10 @@ public class iConomy extends Plugin {
 					return 0;
 				}
 
-				if (total) {
-					return cost*amount;
-				} else {
-					return cost;
-				}
+				return (total) ? cost*amount : cost;
 			} else {
 				cost = Integer.parseInt(info);
-
-				if (total) {
-					return cost*amount;
-				} else {
-					return cost;
-				}
+				return (total) ? cost*amount : cost;
 			}
 		}
 	}
@@ -1185,8 +1230,9 @@ public class iConomy extends Plugin {
 		int stock = itemStock(itemId);
 		double weight = itemWeight(itemId);
 
-		if(stock == 0)
+		if(stock == 0) {
 			stock = 1;
+		}
 
 		return (int) Math.ceil(cost+(cost*(weight/stock)));
 	}
@@ -1203,11 +1249,7 @@ public class iConomy extends Plugin {
 		if(stock <= 1)
 			return false;
 
-		if(amount > stock) {
-			return false;
-		}
-
-		return true;
+		return (amount > stock) ? false : true;
 	}
 
 	/* Shop Listing Functions */
@@ -1242,7 +1284,7 @@ public class iConomy extends Plugin {
 		return i;
 	}
 
-	public void showSellersList(Player player, int page) {
+	public void displaySelling(Player player, int page) {
 		List available = new ArrayList();
 		Map aList;
 
@@ -1251,16 +1293,8 @@ public class iConomy extends Plugin {
 			PreparedStatement ps = null;
 			ResultSet rs = null;
 			int i = 1;
-
-			int amount = page;
-
-			if (amount > 0){
-				amount = (amount - 1) * 10;
-			} else {
-				amount = 0;
-			}
-
-			int process = amount+10;
+			int amount = (page > 0) ? (page - 1) * 10 : 0;
+			int process = amount + 10;
 
 			try {
 				conn = iData.MySQL();
@@ -1291,7 +1325,6 @@ public class iConomy extends Plugin {
 							}
 
 							if(this.globalStock) {
-								bundle = false;
 								cost = this.itemStockSell(cInt(itemId));
 								stock = itemStock(cInt(itemId));
 							}
@@ -1300,12 +1333,12 @@ public class iConomy extends Plugin {
 								continue;
 							}
 
-							if(this.globalStock)
+							if(this.globalStock) {
 								available.add(String.format(this.shopSellingListStock, name, cost+this.moneyName) + " " + String.format(this.shopStockItem, stock));
-							else {
-								if(bundle)
+							} else {
+								if(bundle) {
 									available.add(String.format(this.shopSellingListBundle, name, cost + this.moneyName, perBundle));
-								else {
+								} else {
 									available.add(String.format(this.shopSellingListSingle, name, cost + this.moneyName));
 								}
 							}
@@ -1343,6 +1376,16 @@ public class iConomy extends Plugin {
 					continue;
 				}
 
+				if(cdata.contains(",")) {
+					String[] item = cdata.split(",");
+					perBundle = Integer.parseInt(item[0]);
+					cost = Integer.valueOf(item[1]);
+					bundle = true;
+				} else {
+					cost = Integer.valueOf(cdata);
+					bundle = false;
+				}
+
 				if(this.globalStock) {
 					bundle = false;
 
@@ -1359,25 +1402,18 @@ public class iConomy extends Plugin {
 						log.info("[iConomy Selling List] Invalid item name. " + name);
 					}
 
-				} else if(cdata.contains(",")) {
-					String[] item = cdata.split(",");
-					perBundle = Integer.parseInt(item[0]);
-					cost = Integer.valueOf(item[1]);
-
-					bundle = true;
-				} else {
-					bundle = false;
 				}
 
-				if(cost < 1)
+				if(cost < 1) {
 					continue;
+				}
 
-				if(this.globalStock)
+				if(this.globalStock) {
 					available.add(String.format(this.shopSellingListStock, name, cost+this.moneyName) + " " + String.format(this.shopStockItem, stock));
-				else {
-					if(bundle)
+				} else {
+					if(bundle) {
 						available.add(String.format(this.shopSellingListBundle, name, cost + this.moneyName, perBundle));
-					else {
+					} else {
 						available.add(String.format(this.shopSellingListSingle, name, cost + this.moneyName));
 					}
 				}
@@ -1409,7 +1445,7 @@ public class iConomy extends Plugin {
 		}
 	}
 
-	public void showBuyersList(Player player, int page) {
+	public void displayBuying(Player player, int page) {
 		List available = new ArrayList();
 		Map aList;
 
@@ -1418,16 +1454,8 @@ public class iConomy extends Plugin {
 			PreparedStatement ps = null;
 			ResultSet rs = null;
 			int i = 1;
-
-			int amount = page;
-
-			if (amount > 0){
-				amount = (amount - 1) * 10;
-			} else {
-				amount = 0;
-			}
-
-			int process = amount+10;
+			int amount = (page > 0) ? (page - 1) * 10 : 0;
+			int process = amount + 10;
 
 			try {
 				conn = iData.MySQL();
@@ -1467,9 +1495,9 @@ public class iConomy extends Plugin {
 								cost = this.itemStockCost(cInt(itemId));
 							}
 
-							if(this.globalStock)
+							if(this.globalStock) {
 								available.add(String.format(this.shopPurchaseListStock, name, cost+this.moneyName) + " " + String.format(this.shopStockItem, stock));
-							else {
+							} else {
 								if(bundle)
 									available.add(String.format(this.shopPurchaseListBundle, name, cost+this.moneyName, perBundle));
 								else {
@@ -1506,6 +1534,16 @@ public class iConomy extends Plugin {
 				int cost = 0;
 				int stock = 0;
 
+				if(cdata.contains(",")) {
+					String[] item = cdata.split(",");
+					perBundle = Integer.parseInt(item[0]);
+					cost = Integer.valueOf(item[1]);
+					bundle = true;
+				} else {
+					cost = Integer.valueOf(cdata);
+					bundle = false;
+				}
+
 				if(this.globalStock) {
 					bundle = false;
 
@@ -1513,31 +1551,24 @@ public class iConomy extends Plugin {
 						int itemId = Integer.parseInt(items.getKey(name).toString());
 
 						if(itemStock.get(cInt(itemId)) != null) {
-							cost = this.itemStockCost(cInt(itemId));
+							cost = this.itemStockSell(cInt(itemId));
 							stock = itemStock(cInt(itemId));
 						} else {
 							continue;
 						}
 					} else {
-						log.info("[iConomy Buying List] Invalid item name. " + name);
+						log.info("[iConomy Selling List] Invalid item name. " + name);
 					}
 
-				} else if(cdata.contains(",")) {
-					String[] item = cdata.split(",");
-					perBundle = Integer.parseInt(item[0]);
-					cost = Integer.valueOf(item[1]);
-
-					bundle = true;
-				} else {
-					bundle = false;
 				}
 
-				if(cost < 1)
+				if(cost < 1) {
 					continue;
+				}
 
-				if(this.globalStock)
+				if(this.globalStock) {
 					available.add(String.format(this.shopPurchaseListStock, name, cost+this.moneyName) + " " + String.format(this.shopStockItem, stock));
-				else {
+				} else {
 					if(bundle)
 						available.add(String.format(this.shopPurchaseListBundle, name, cost+this.moneyName, perBundle));
 					else {
@@ -1554,13 +1585,7 @@ public class iConomy extends Plugin {
 			player.sendMessage(this.shopTag + String.format(this.shopPurchaseListStart, page, (int)Math.ceil(available.size()/10.0D)));
 
 			try {
-				int amount = page;
-
-				if (amount > 0){
-					amount = (amount - 1) * 10;
-				} else {
-					amount = 0;
-				}
+				int amount = (page > 0) ? (page - 1) * 10 : 0;
 
 				for (int i = amount; i < amount + 10; i++)
 					if (available.size() > i)
@@ -1572,7 +1597,7 @@ public class iConomy extends Plugin {
 	}
 
 	/* Shop Functions */
-	public boolean doPurchase(Player player, int itemId, int amount) {
+	public boolean purchaseItem(Player player, int itemId, int amount) {
 		int itemAmount = 0;
 		int needsAmount = this.itemNeedsAmount("buy", cInt(itemId));
 
@@ -1625,7 +1650,7 @@ public class iConomy extends Plugin {
 			int total = 0;
 
 			if(this.globalStock) {
-				total = itemAmount*amount;
+				total = this.itemStockCost(cInt(itemId))*amount;
 			} else {
 				total = this.itemCost("buy", cInt(itemId), amount, true);
 			}
@@ -1684,7 +1709,7 @@ public class iConomy extends Plugin {
 		return false;
 	}
 
-	public boolean doSell(Player player, int itemId, int amount) {
+	public boolean sellItem(Player player, int itemId, int amount) {
 		Inventory bag = player.getInventory();
 		int needsAmount = this.itemNeedsAmount("sell", cInt(itemId));
 
@@ -1874,11 +1899,15 @@ public class iConomy extends Plugin {
 			if(player1 != null)
 				player1.sendMessage(this.moneyPaySelf);
 
+			this.shopLog("pay", pdata1 + "|"+pdata2+"|0|200|" + amount);
+
 			if(debugging)
 				log.info("[iConomy Debugging] [" + pdata1 + "] [" + pdata2 + "] [" + amount + "] [#20344]");
 		} else if (amount > i) {
 			if(player1 != null)
 				player1.sendMessage(this.moneyNotEnough);
+
+			this.shopLog("pay", pdata1 + "|"+pdata2+"|0|200|" + amount);
 
 			if(debugging)
 				log.info("[iConomy Debugging] [" + pdata1 + "] [" + pdata2 + "] [" + amount + "] [#20345]");
@@ -2674,12 +2703,7 @@ public class iConomy extends Plugin {
 				ps.setInt(2, i);
 				rs = ps.executeQuery();
 
-
-				if(rs.next()) {
-					return rs.getInt("amount");
-				} else {
-					return 0;
-				}
+				return (rs.next()) ? rs.getInt("amount") : 0;
 
 			} catch (Exception ex) {
 				log.log(Level.SEVERE, "[iConomy] Listing failed for buying list", ex);
@@ -3145,6 +3169,8 @@ public class iConomy extends Plugin {
 			return this.canDo(this.canSignSell, player);
 		} else if (command.equals("trade")) {
 			return this.canDo(this.canTrade, player);
+		} else if (command.equals("position")) {
+			return this.canDo(this.canPosition, player);
 		}
 
 		return false;
@@ -3638,7 +3664,7 @@ public class iConomy extends Plugin {
 			}
 
 			/*
-			 *  iConomy [Shop] [Basic 1.0]
+			 *  iConomy [Auction]
 			 *
 			 *  @author: Nijikokun
 			 *  @description: Creates a basic shop!
@@ -4077,16 +4103,52 @@ public class iConomy extends Plugin {
 			if (split[0].equalsIgnoreCase("/shop") && p.globalShop) {
 				// Level 1
 				if ((split.length < 2)) {
+					if(p.shopPosition.contains(";")) {
+						if(!p.nearStore(player)) {
+							player.sendMessage(p.shopTag + p.shopNotInside);
+							return true;
+						}
+					}
+
 					player.sendMessage(Colors.Rose + "Usage: /shop [command|item|itemID] [item] [amount]");
 					player.sendMessage(Colors.Rose + "    Commands: buy, sell, help");
 					player.sendMessage(Colors.Rose + "Alt-Commands: -b, -s, ?");
 					return true;
 				}
 
+				if ((split.length < 3)) {
+					if(!split[1].equalsIgnoreCase("?") || !split[1].equalsIgnoreCase("help") || !split[1].equalsIgnoreCase("-p") || !split[1].equalsIgnoreCase("position") || !split[1].equalsIgnoreCase("-up") || !split[1].equalsIgnoreCase("unposition")) {
+						if(p.shopPosition.contains(";")) {
+							if(!p.nearStore(player)) {
+								player.sendMessage(p.shopTag + p.shopNotInside);
+								return true;
+							}
+						}
+					}
+				}
+
 				// Level 2
 				if ((split.length < 3)) {
 					if (split[1].equalsIgnoreCase("?") || split[1].equalsIgnoreCase("help")) {
 						p.halp(player, "shop");
+						return true;
+					} else if (split[1].equalsIgnoreCase("-p") || split[1].equalsIgnoreCase("position")) {
+						if(!p.can(player, "position"))
+							return false;
+
+						p.shopPosition = player.getX()+";"+player.getZ()+";";
+						p.settings.setString("shop-position", p.shopPosition);
+						player.sendMessage(p.shopTag + String.format(p.shopSetPosition, player.getX(), player.getY()));
+
+						return true;
+					} else if (split[1].equalsIgnoreCase("-up") || split[1].equalsIgnoreCase("unposition")) {
+						if(!p.can(player, "position"))
+							return false;
+
+						p.shopPosition = "";
+						p.settings.setString("shop-position", "");
+						player.sendMessage(p.shopTag + String.format(p.shopUnSetPosition, player.getName()));
+
 						return true;
 					} else {
 						int itemID = 0;
@@ -4101,8 +4163,7 @@ public class iConomy extends Plugin {
 							if(items.getKey(split[1]) != null) {
 								itemID = Integer.parseInt(items.getKey(split[1]).toString());
 							} else {
-								player.sendMessage(p.shopInvalidItem);
-								return true;
+								return false;
 							}
 						}
 
@@ -4166,9 +4227,9 @@ public class iConomy extends Plugin {
 						String type = split[2];
 
 						if(type.equalsIgnoreCase("-b") || type.equalsIgnoreCase("buy")) {
-							p.showBuyersList(player, 1);
+							p.displayBuying(player, 1);
 						} else if(type.equalsIgnoreCase("-s") || type.equalsIgnoreCase("sell")) {
-							p.showSellersList(player, 1);
+							p.displaySelling(player, 1);
 						} else {
 							player.sendMessage(Colors.Rose + "Invalid Usage: /shop list [buy|sell] <page>");
 							player.sendMessage(Colors.Rose + "Alt-Usage: -l, -b|-s");
@@ -4204,7 +4265,7 @@ public class iConomy extends Plugin {
 						int buying = p.itemNeedsAmount("buy", cInt(itemID));
 
 						if (buying != 0) {
-							p.doPurchase(player, itemID, 1);
+							p.purchaseItem(player, itemID, 1);
 						} else {
 							player.sendMessage(p.shopPurchaseUnavailable);
 						}
@@ -4241,7 +4302,7 @@ public class iConomy extends Plugin {
 							int selling = p.itemNeedsAmount("sell", cInt(itemID));
 
 							if (selling != 0) {
-								p.doSell(player, itemID, 1);
+								p.sellItem(player, itemID, 1);
 							} else {
 								player.sendMessage(Colors.Rose + "Currently cannot be sold.");
 							}
@@ -4394,7 +4455,7 @@ public class iConomy extends Plugin {
 							int buying = p.itemNeedsAmount("buy", cInt(itemID));
 
 							if (buying != 0) {
-								p.doPurchase(player, itemID, amount);
+								p.purchaseItem(player, itemID, amount);
 							} else {
 								player.sendMessage(p.shopPurchaseUnavailable);
 							}
@@ -4416,9 +4477,9 @@ public class iConomy extends Plugin {
 						}
 
 						if(type.equalsIgnoreCase("-b") || type.equalsIgnoreCase("buy")) {
-							p.showBuyersList(player, amount);
+							p.displayBuying(player, amount);
 						} else if(type.equalsIgnoreCase("-s") || type.equalsIgnoreCase("sell")) {
-							p.showSellersList(player, amount);
+							p.displaySelling(player, amount);
 						} else {
 							player.sendMessage(Colors.Rose + "Invalid Usage: /shop list [buy|sell] <page>");
 							player.sendMessage(Colors.Rose + "Alt-Usage: -l, -b|-s");
@@ -4462,7 +4523,7 @@ public class iConomy extends Plugin {
 							int selling = p.itemNeedsAmount("sell", cInt(itemID));
 
 							if (selling != 0) {
-								p.doSell(player, itemID, amount);
+								p.sellItem(player, itemID, amount);
 							} else {
 								player.sendMessage(p.shopSellingUnavailable);
 							}
@@ -4732,13 +4793,14 @@ public class iConomy extends Plugin {
 					return false;
 				}
 
+				if(p.signWaitAmount > 0) {
+					if (!p.waitedEnough(player.getName())) {
+						player.sendMessage(String.format(p.signWait, p.signWaitAmount));
+						return false;
+					}
 
-				if (!p.waitedEnough(player.getName())) {
-					player.sendMessage(String.format(p.signWait, p.signWaitAmount));
-					return false;
+					p.updateClick(player.getName());
 				}
-
-				p.updateClick(player.getName());
 
 				String[] split = sign.getText(2).split(" ");
 				int i = Integer.parseInt(split[0]);
@@ -4870,6 +4932,18 @@ public class iConomy extends Plugin {
 					} else {
 						return;
 					}
+				}
+			}
+		}
+
+		public void onPlayerMove(Player player, Location from, Location to) {
+			if(p.globalShop && p.shopPosition.contains(";") && p.shopGreet) {
+				if(p.nearStore(player) && !p.inShop.contains(player.getName())) {
+					player.sendMessage(p.shopTag + String.format(p.shopWelcome, player.getName()));
+					p.inShop.add(player.getName());
+				} else if(!p.nearStore(player) && p.inShop.contains(player.getName())) {
+					p.inShop.remove(player.getName());
+					player.sendMessage(p.shopTag + String.format(p.shopGoodbye, player.getName()));
 				}
 			}
 		}
