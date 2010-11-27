@@ -208,16 +208,20 @@ public final class iProperty {
                 continue;
             }
 
-            int delimPosition = line.indexOf('=');
-            String key = line.substring(0, delimPosition).trim();
+			if(line.contains("=")) {
+				int delimPosition = line.indexOf('=');
+				String key = line.substring(0, delimPosition).trim();
 
-            if (this.props.containsKey(key)) {
-                String value = this.props.get(key);
-                ps.println(key + "=" + value);
-                usedProps.add(key);
-            } else {
-                ps.println(line);
-            }
+				if (this.props.containsKey(key)) {
+					String value = this.props.get(key);
+					ps.println(key + "=" + value);
+					usedProps.add(key);
+				} else {
+					ps.println(line);
+				}
+			} else {
+				ps.println(line);
+			}
         }
 
         // Add any new properties
