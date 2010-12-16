@@ -36,7 +36,7 @@ public class Messaging {
      * Parses the original string against color specific codes. This one converts &[code] to §[code]
      * <br /><br />
      * Example:
-     * <blockquote<pre>
+     * <blockquote><pre>
      * Messaging.parse("Hello &2world!"); // returns: Hello §2world!
      * </pre></blockquote>
      *
@@ -50,9 +50,8 @@ public class Messaging {
 
     /**
      * Converts color codes into the simoleon code. Sort of a HTML format color code tag.
-     * <br /><br />
-     * Color codes allowed: black, navy, green, teal, red, purple, gold, silver, gray, blue, lime, aqua, rose, pink, yellow, white.
-     * <br /><br />
+     * <p>
+     * Color codes allowed: black, navy, green, teal, red, purple, gold, silver, gray, blue, lime, aqua, rose, pink, yellow, white.</p>
      * Example:
      * <blockquote<pre>
      * Messaging.colorize("Hello &lt;green>world!"); // returns: Hello §2world!
