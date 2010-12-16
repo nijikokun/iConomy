@@ -23,7 +23,7 @@ public class iConomy extends Plugin {
      * Central Data pertaining directly to the plugin name & versioning.
      */
     public static String name = "iConomy";
-    public static String version = "1.2";
+    public static String version = "1.3";
 
     /**
      * Grab the logging system to attach to.
